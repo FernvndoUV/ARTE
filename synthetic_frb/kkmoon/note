@@ -1,0 +1,12 @@
+careful when programming set on in the channel inmediatly..
+
+arb1
+parameters:
+freq = .001249457Khz
+ampl=10.96V
+offs=5.43V
+dutty=50%
+
+
+tested right values with 800MHz in the Agilent -30dBm
+offset=2.93V
