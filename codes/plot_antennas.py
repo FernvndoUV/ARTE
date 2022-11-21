@@ -44,4 +44,5 @@ if __name__ == '__main__':
     roach = corr.katcp_wrapper.FpgaClient(args.ip)
     #roach = calan.initialize_roach(args.ip, boffile=args.boffile, upload=args.upload)
     plot_antennas(roach)
+    print('hola')
 
