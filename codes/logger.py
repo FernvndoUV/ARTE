@@ -31,8 +31,6 @@ parser.add_argument('-cal', '--cal', dest='cal_time', default=1, type=float)
 
 
 
-
-
 def write_10gbe_rawdata(filename, sock, pkt_size):
     """ 
     Function to receive data from the sock socket and write it to a file.

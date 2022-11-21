@@ -9,7 +9,7 @@ import corr
 ### hyperparameters
 ###
 roach_ip ='10.17.89.91'
-boffile = 'arte_headers2.fpg'
+boffile = 'arte_headers2.fpg' #'arte_gpio.fpg'#'arte_new2.fpg'
 
 ##harcoded parameters
 fpga_clk = 150.*10**6
@@ -43,7 +43,6 @@ dram_frames = 10
 flags = np.arange(20).tolist()
 #flags = flags+[1024]
 flags += (np.arange(170)+20).tolist()
-
 flags += (np.arange(30)+300).tolist()
 flags += (np.arange(41)+380).tolist()
 flags += (np.arange(5)+1155).tolist()
@@ -55,8 +54,6 @@ flags += (np.arange(10)+1367).tolist()
 flags += (np.arange(16)+1439).tolist()
 flags += (np.arange(2)+1830).tolist()
 flags += (np.arange(136)+1911).tolist()
-
-###
 ###
 ###
 
@@ -97,9 +94,10 @@ roach_control.enable_10gbe()
 #roach_control.initialize_dram(addr=sock_addr, n_pkt=dram_frames)
 #roach_control.write_dram()
 
-
 #enable rfi subsytem
 roach_control.enable_rfi_subsystem()
 
 roach_control.reset_accumulators()
 roach_control.enable_dedispersor_acc()
+
+
