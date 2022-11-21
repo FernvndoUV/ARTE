@@ -1,1 +1,13 @@
 measures/*
+*/__pycache__/
+*.pyc
+*.log
+*.swp
+*.autosave
+*.tar.gz
+*.json
+*.pdf
+*.png
+*.npz
+*calibrations*
+*.hdf5
