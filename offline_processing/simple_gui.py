@@ -307,7 +307,7 @@ class main_app():
         self.axes[1].plot(freq,10*np.log10(sample_spect[start_t,:]))
         self.axes[2].plot(freq,sample_spect[start_t,:], label='data')
         if(self.matflag is None):
-            self.axes[2].plot(freq,baseline, label='baseline')
+            self.axes[2].plot(freq,baseline, label='baseline', color='black')
             self.axes[2].legend()
         self.matflag = 1 
         self.canvas.draw()
