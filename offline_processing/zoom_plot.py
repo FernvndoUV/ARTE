@@ -1,5 +1,5 @@
 #from log_reduction_v1 import get_image_data_temperature
-from log_red_V2 import get_image_data_temperature, get_dm_data
+from log_reduction import get_image_data_temperature, get_dm_data
 import numpy as np
 import matplotlib.pyplot as plt
 import os, sys

@@ -2,13 +2,10 @@ import tkinter as tk
 import tkinter.filedialog as fd
 from tkinter import ttk
 import os
-from datetime import datetime
 import subprocess, shlex
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from log_reduction import read_10gbe_data, get_baseline
-from scipy.signal import savgol_filter, medfilt
 
 
 CODE_PATH = os.getcwd()
@@ -20,8 +17,8 @@ TAILS = 32
 class main_app():
 
     def __init__(self, top):
-        top.wm_title('ARTE debug')
         
+        top.wm_title('ARTE debug')
         tabControl = ttk.Notebook(top)
         tab1 = ttk.Frame(tabControl)
         tab2 = ttk.Frame(tabControl)
@@ -147,68 +144,24 @@ class main_app():
         self.file_time = tk.Entry(frame1)
         self.file_time.grid(row=3, column=1, padx=2, pady=3,sticky='n')
         self.file_time.insert(0, str(FILE_TIME))
+    
+        ##misc plots
+        fig, axes = plt.subplots(1,3)
 
-        ###matploltib plots
-        self.matflag = None
-        frame_plots = tk.Frame(tab3)
-        frame_plots.grid(row=0, column=0, padx=5, sticky='n')
-        #frame_plots.pack(side=tk.TOP)
-
-        fig, axes = plt.subplots(3,1, sharex=True)
-        self.axes = axes
-        fig.tight_layout()
-
-        self.canvas = FigureCanvasTkAgg(fig, master=frame_plots)
-        self.canvas.draw()
-        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
-        self.toolbar = NavigationToolbar2Tk(self.canvas, frame_plots)
-        self.toolbar.update()
-        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
+        
         for i in range(3):
             axes[i].grid()
-        axes[0].set_title('temperature')
-        axes[1].set_title('Power')
-        axes[2].set_title('Linear')
+        canvas = FigureCanvasTkAgg(fig, master=tab3)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        frame3_0 = tk.Frame(tab3)
-        frame3_0.grid(row=1, column=0, pady=5, sticky='n')
-        #frame3_0.pack(side=tk.TOP)
-
-        self.btn_folder2 = tk.Button(frame3_0, 
-                text="open folder")
-        self.btn_folder2.grid(row=0, column=0, padx=3, sticky='n')
-        self.btn_folder2.bind('<Button-1>', self.folder_search)
-        
-        self.path2 = tk.Entry(frame3_0)
-        self.path2.grid(row=0, column=1, padx=5, sticky='n')
-
-        frame3_1 = tk.Frame(tab3)
-        frame3_1.grid(row=2, column=0, pady=5, sticky='n')
-        #frame3_1.pack(side=tk.TOP)
-        lab = tk.Label(frame3_1, text='Time:')
-        lab.grid(row=0, column=0, padx=5, pady=3, sticky='n')
-        
-        self.t_matplot = tk.StringVar()
-        self.ent_matplot = tk.Entry(frame3_1, textvariable=self.t_matplot, width=30)
-        self.ent_matplot.grid(row=0, column=1, padx=2, pady=3,sticky='n')
-        self.ent_matplot.bind('<Key>', self.time_formating_matplot)
+        toolbar = NavigationToolbar2Tk(canvas, tab3)
+        toolbar.update()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
 
-        self.btn_matplot = tk.Button(frame3_0, 
-                text="Generate plot")
-        self.btn_matplot.grid(row=0, column=2, padx=40, sticky='n')
-        self.btn_matplot.bind('<Button-1>', self.gen_matplot)
-        self.btn_matplot.bind('Return', self.gen_matplot)
-        
-        self.btn_clean = tk.Button(frame3_1, 
-                text="Clean plot")
-        self.btn_clean.grid(row=0, column=2, padx=40, sticky='n')
-        self.btn_clean.bind('<Button-1>', self.clean_matplot)
-        self.btn_clean.bind('Return', self.clean_matplot)
 
-        
+
         
     def gen_plots(self, event):
         folder_name = self.path.get()
@@ -251,89 +204,12 @@ class main_app():
         return 1
           
 
-    def gen_matplot(self, event):
-        ##now I need to get the damn data... and because its a new requirement I
-        ##cant reuse my codes...
-        
-        folder_name = self.path.get()
-        folder_name = os.path.join(folder_name, 'logs')
-        start = self.ent_matplot.get()
-        cal_time = float(self.cal_time.get())
-        file_time = float(self.file_time.get())
-        spect_time = float(self.spect_time.get())
-        
-        dirs_name = os.listdir(folder_name)
-        dirs_name.sort()
-        dirs = [os.path.join(folder_name, x) for x in dirs_name]
-        
-        start = datetime.strptime(start, "%Y/%m/%d/%H:%M:%S:%f")
-        date = datetime.strptime(dirs_name[-1].split('.')[0], "%Y-%m-%d %H:%M:%S")
-        if(start>date):
-            start_ind = len(dirs_name)-1
-        else:
-            for i in range(len(dirs_name)):
-                date = datetime.strptime(dirs_name[i].split('.')[0], "%Y-%m-%d %H:%M:%S")
-                if(date>start):
-                    break
-            if((i==0)):
-                start_ind = i
-            else:
-                start_ind = i-1
-
-        date = datetime.strptime(dirs_name[start_ind].split('.')[0], "%Y-%m-%d %H:%M:%S")
-        start_sec = (start-date).total_seconds()
-        
-        logs = dirs[start_ind]
-        
-        sample = read_10gbe_data(logs)
-        sample_spect, header = sample.get_complete()
-        sample.close_file()
-
-        hot_source = sample_spect[2:int(cal_time/spect_time*3),:]
-        hot_pow = np.sum(hot_source, axis=1)
-        hot_pow = medfilt(hot_pow, 5)
-        thresh = (np.max(hot_pow)+np.min(hot_pow))/2
-        index = (hot_pow>thresh)
-        flags, baseline = get_baseline(np.median(hot_source[index,:],axis=0))
-        
-        temp_data = np.zeros(sample_spect.shape)
-        temp_data[:,flags] = sample_spect[:, flags]*280./baseline[flags]-90
-        
-        t_sec = np.arange(temp_data.shape[0])*spect_time
-        start_t = np.argmin(np.abs(t_sec-start_sec))
-
-        freq = np.linspace(1200,1800,2048, endpoint=False)
-        self.axes[0].plot(freq, temp_data[start_t,:])
-        self.axes[1].plot(freq,10*np.log10(sample_spect[start_t,:]))
-        self.axes[2].plot(freq,sample_spect[start_t,:], label='data')
-        if(self.matflag is None):
-            self.axes[2].plot(freq,baseline, label='baseline')
-            self.axes[2].legend()
-        self.matflag = 1 
-        self.canvas.draw()
-        return 1
-    
-    def clean_matplot(self, event):
-        for i in range(3):
-            self.axes[i].clear()
-            self.axes[i].grid()
-        self.canvas.draw()
-        self.matflag = None
-        return 1
         
 
     def folder_search(self, event):
         path = fd.askdirectory()
         self.path.delete(0, tk.END)
         self.path.insert(0,path)
-        self.path2.delete(0, tk.END)
-        self.path2.insert(0,path)
-        return 1
-    
-    def folder_search_matplot(self, event):
-        path = fd.askdirectory()
-        self.path_2.delete(0, tk.END)
-        self.path_2.insert(0,path)
         return 1
 
     def temp_check(self, event):
@@ -383,15 +259,6 @@ class main_app():
             elif(len(cur_date) in [13,16,19]):
                 self.ent_tstop.insert(tk.END,':')
 
-    def time_formating_matplot(self, event):
-        cur_date = self.t_matplot.get()
-        if((event.keysym !="backspace" ) & (event.keysym in 
-            ["0","1","2","3","4","5","6","7","8","9"]) ):
-            #check that its a number
-            if(len(cur_date) in [4,7,10]):
-                self.ent_matplot.insert(tk.END,'/')
-            elif(len(cur_date) in [13,16,19]):
-                self.ent_matplot.insert(tk.END,':')
 
 if __name__ == '__main__':
     root = tk.Tk()
