@@ -22,9 +22,9 @@ sudo setpci -v -d 8086:10fb e6.b=2e
 sleep 3
 
 python2 ../codes/logger.py \
-    --folder    ../logger_fran_test_antv3\
+    --folder    ../logger_14Dec\
     --filetime  5\
-    --totaltime 2880\
+    --totaltime 14400\
     --roach_ip 10.17.89.91\
     --cal 1\
     --dms 45 90 135 180 225 270 315 360 405 450 495

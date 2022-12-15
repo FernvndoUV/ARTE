@@ -59,7 +59,7 @@ flags += (np.arange(136)+1911).tolist()
 
 roach = corr.katcp_wrapper.FpgaClient(roach_ip)
 time.sleep(1)
-roach.upload_program_bof(bof_file=boffile, port=3000)
+roach.upload_program_bof(bof_file=boffile, port=3000, timeout=10)
 
 #roach = calan.initialize_roach(roach_ip, boffile=boffile, upload=1)
 #roach = calan.initialize_roach(roach_ip, upload=0)

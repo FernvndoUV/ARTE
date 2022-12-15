@@ -15,10 +15,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--folder_name", dest="folder_name", default=None)
 parser.add_argument("-l", "--log_per_img", dest="log_per_img", default=1, type=int)
 parser.add_argument("-c", "--cal_time", dest="cal_time", default=1, type=float)
-parser.add_argument("-ft", "--file_time", dest="file_time", default=1, type=float)
+parser.add_argument("-ft", "--file_time", dest="file_time", default=5, type=float)
 parser.add_argument("-st", "--spect_time", dest="spect_time", default=1e-2)
-parser.add_argument("-d", "--decimation", dest="decimation", default=1, type=int)
-parser.add_argument("-w", "--avg_win", dest="mov_avg_size", default=100, type=int)
+parser.add_argument("-d", "--decimation", dest="decimation", default=10, type=int)
+parser.add_argument("-w", "--avg_win", dest="mov_avg_size", default=15, type=int)
 parser.add_argument("-t", "--tails", dest="tails", default=32, type=int)
 parser.add_argument("-i", "--img_folder", dest="img_folder", type=str)
 parser.add_argument("-m", "--plot_misc", dest="plot_misc", action="store_true")
@@ -26,7 +26,7 @@ parser.add_argument("-pc", "--plot_clip", dest="plot_clip", action="store_true")
 
 
 
-###
+##
 ###
 ###
 
@@ -51,6 +51,8 @@ class read_10gbe_data():
         ind = np.where(data==0xaabbccdd)[0][0]
         return ind
 
+
+
     def get_spectra(self, number):
         """
         number  :   requested number of spectrums
@@ -68,6 +70,9 @@ class read_10gbe_data():
         spectra = np.swapaxes(spectra.T, 0,1)
         spectra = spectra.reshape((-1,2048))
         return spectra, header
+
+
+
 
     def get_complete(self):
         """
@@ -137,12 +142,9 @@ def get_image_data_temperature(filenames,cal_time=1,spect_time=1e-2,file_time=1 
     sample_spect, header = sample.get_complete()
     sample.close_file()
 
-    if(temperature):
-        #get the first spectras as baseline
-        hot_source = sample_spect[2:int(cal_time/spect_time),:]
-        flags, baseline = get_baseline(np.median(hot_source,axis=0))
-    else:
-        flags = np.ones(2048, dtype=bool)
+    #get the first spectras as baseline
+    hot_source = sample_spect[2:int(cal_time/spect_time),:]
+    flags, baseline = get_baseline(np.median(hot_source,axis=0))
 
     ##approximated size for one file
     spect_size = int(file_time*60/spect_time-tails)
@@ -150,69 +152,53 @@ def get_image_data_temperature(filenames,cal_time=1,spect_time=1e-2,file_time=1 
     clip = np.zeros(len(filenames)*spect_size//decimation, dtype=bool)
     bases = np.zeros((len(filenames), 2048))
 
+    for i in range(0, len(filenames)):
+        sample = read_10gbe_data(filenames[i])
+        sample_spect, header = sample.get_complete()
+        sample.close_file()
 
-    if(temperature):
-        for i in range(0, len(filenames)):
-            sample = read_10gbe_data(filenames[i])
-            sample_spect, header = sample.get_complete()
-            sample.close_file()
+        #get the first spectras as base line
+        hot_source = sample_spect[2:int(cal_time/spect_time*3),:]
+        ##at hot source there is an increase in the amount of power
+        hot_pow = np.sum(hot_source, axis=1)
+        hot_pow = medfilt(hot_pow, 5)
+        thresh = (np.max(hot_pow)+np.min(hot_pow))/2
+        index = (hot_pow>thresh)
+        #ipdb.set_trace()
+        #
+        flags, baseline = get_baseline(np.median(hot_source[index,:],axis=0))
+        bases[i,:] = baseline
 
-            #get the first spectras as base line
-            hot_source = sample_spect[2:int(cal_time/spect_time*3),:]
-            ##at hot source there is an increase in the amount of power
-            hot_pow = np.sum(hot_source, axis=1)
-            hot_pow = medfilt(hot_pow, 5)
-            thresh = (np.max(hot_pow)+np.min(hot_pow))/2
-            index = (hot_pow>thresh)
-            #ipdb.set_trace()
-            #
-            flags, baseline = get_baseline(np.median(hot_source[index,:],axis=0))
-            bases[i,:] = baseline
+        aux = sample_spect[:spect_size,:]
+        aux = (aux[:, flags]*380./baseline[flags])-90
+        #accumulate, see that could be data that is discarted depending on the
+        #decimation value.
+        dec_size = aux.shape[0]//decimation
+        aux = aux[:dec_size*decimation,:].reshape([-1, decimation, aux.shape[1]])
+        aux = np.mean(aux.astype(float), axis=1)
+        data[i*(spect_size//decimation):(i+1)*(spect_size//decimation),flags] = aux
 
-            aux = sample_spect[:spect_size,:]
-            aux = (aux[:, flags]*380./baseline[flags])-90
-            #accumulate, see that could be data that is discarted depending on the
-            #decimation value.
-            dec_size = aux.shape[0]//decimation
-            aux = aux[:dec_size*decimation,:].reshape([-1, decimation, aux.shape[1]])
-            aux = np.mean(aux.astype(float), axis=1)
-            data[i*(spect_size//decimation):(i+1)*(spect_size//decimation),flags] = aux
-
-           #now we look at the clipping
-            #ipdb.set_trace()
-            sat = np.bitwise_and(header[:spect_size,1],2**4-1) #just take the cliping values
-            sat = sat[:dec_size*decimation].reshape([-1, decimation])
-            sat = np.sum(sat, axis=1)
-            sat = np.invert(sat==0)
-            clip[i*(spect_size//decimation):(i+1)*(spect_size//decimation)] = sat
-    else:
-        for i in range(0, len(filenames)):
-            sample = read_10gbe_data(filenames[i])
-            sample_spect, header = sample.get_complete()
-            sample.close_file()
-            aux = sample_spect[:spect_size,:]
-            #accumulate, see that could be data that is discarted depending on the
-            #decimation value.
-            dec_size = aux.shape[0]//decimation
-            aux = aux[:dec_size*decimation,:].reshape([-1, decimation, aux.shape[1]])
-            aux = np.mean(aux.astype(float), axis=1)
-            data[i*(spect_size//decimation):(i+1)*(spect_size//decimation),flags] = 10*np.log10(aux+1)-111.119
-            #now we look at the clipping
-            sat = np.bitwise_and(header[:spect_size,1],2**4-1) #just take the cliping values
-            sat = sat[:dec_size*decimation].reshape([-1, decimation])
-            sat = np.sum(sat, axis=1)
-            sat = np.invert(sat==0)
-            clip[i*(spect_size//decimation):(i+1)*(spect_size//decimation)] = sat
-
+       #now we look at the clipping
+        #ipdb.set_trace()
+        sat = np.bitwise_and(header[:spect_size,1],2**4-1) #just take the cliping values
+        sat = sat[:dec_size*decimation].reshape([-1, decimation])
+        sat = np.sum(sat, axis=1)
+        sat = np.invert(sat==0)
+        clip[i*(spect_size//decimation):(i+1)*(spect_size//decimation)] = sat
 
     avg_pow = np.mean(data[:,flags], axis=1)
     avg_pow = moving_average(avg_pow, win_size=win_size)
     clip = moving_average(clip, win_size=win_size)
     clip = np.invert(clip==0)
+    #print(clip)
     t = np.arange(len(avg_pow))*spect_time/60.*decimation   #time in minutes
+    #plt.plot(data[100,:])
+    #plt.grid()
+    #plt.show()
 
     return data, avg_pow, clip, t, bases,flags
 
+# savitzky_golay(y, 51, 3)
 
 def get_dm_data(filenames):
     dms = []
@@ -222,9 +208,13 @@ def get_dm_data(filenames):
         mov_avg.append([])
     for filename in filenames:
         f = np.load(filename+'.npz', allow_pickle=True)
+        # dms[0].append(savgol_filter(f['dm0'].flatten()/2.**15,51,3))
+        # dms[1].append(savgol_filter(f['dm1'].flatten()/2.**15,51,3))
+        # dms[2].append(savgol_filter(f['dm2'].flatten()/2.**15,51,3))
         dms[0].append(f['dm0'].flatten()/2.**15)
         dms[1].append(f['dm1'].flatten()/2.**15)
         dms[2].append(f['dm2'].flatten()/2.**15)
+
         dms[3].append(f['dm3'].flatten()/2.**15)
         dms[4].append(f['dm4'].flatten()/2.**15)
         dms[5].append(f['dm5'].flatten()/2.**15)
@@ -244,7 +234,7 @@ def get_dm_data(filenames):
         mov_avg[8].append(f['mov_avg8'].flatten()/2.**15)
         mov_avg[9].append(f['mov_avg9'].flatten()/2.**15)
         mov_avg[10].append(f['mov_avg10'].flatten()/2.**15)
-        f.close()
+    f.close()
     return dms, mov_avg
 
 
@@ -275,8 +265,9 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
         fig, axes = plt.subplots(2,1, sharex=True, gridspec_kw={'height_ratios': [0.15,0.85]})
         axes[0].set_title('Average power',fontsize=20)
         axes[0].plot(t,avg_pow,linewidth=1.5)
-        axes[0].axis(ymin =  np.mean(avg_pow)-5 , ymax = np.mean(avg_pow)+5 )
-        axes[0].vlines([1,2,3,4],  np.mean(avg_pow)-5 ,np.mean(avg_pow)+5 , linestyles='dashed',linewidth= 0.1, colors='grey')
+        # axes[0].axis(ymin =  np.mean(avg_pow)-5 , ymax = np.mean(avg_pow)+5 )
+        # axes[0].vlines([1,2,3,4,6,7,8,9],  np.mean(avg_pow)-5 ,np.mean(avg_pow)+5 , linestyles='dashed',linewidth= 0.1, colors='grey')
+        #,2,3,4]
         axes[0].grid()
         axes[0].set_ylabel('Temperature K',fontsize=15)
         axes[0].tick_params(axis= 'y', labelsize=15)
@@ -299,8 +290,9 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
                 axes[0].axvspan(t[up], t[down], color='r', alpha=0.3, lw=0)
 
         graph = axes[1].pcolormesh(t,freq , data[:len(t),::].T, cmap = 'viridis',vmax = 290,vmin =  200,shading='auto' )
-         
-        axes[1].vlines([1,2,3,4],freq[0], freq[2047], linestyles='dashed', linewidth= 0.1, colors='grey')
+        # axes[1].vlines([1,2,3,4,6,7,8,9],freq[0], freq[2047], linestyles='dashed', linewidth= 0.1, colors='grey')
+         #,6,7,8,9,11,12,13,14,16,17,18,19]
+
         axes[1].set_xlabel('Minutes',fontsize=15)
         axes[1].set_ylabel('MHz',fontsize=15)
         plt.tick_params(axis='both', labelsize=15)
@@ -320,18 +312,24 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
             dms, mov_avg = get_dm_data(submisc)
 
             tf = t[-1]
-            fig, axes = plt.subplots(11,1, sharex=True)
-            for i in range(11):
+            DMs = [45,90,135]
+            fig, axes = plt.subplots(3,1)
+            for i in range(3):
                 t = np.linspace(0,tf, len(dms[i][0]))
                 axes[i].plot(t,dms[i][0])
                 axes[i].plot(t, mov_avg[i][0])
+                axes[0].set_title('Dedispersed power',fontsize=10)
+                axes[0].set_ylabel('DM 45',fontsize=8)
+                axes[1].set_ylabel('DM 90',fontsize=8)
+                axes[2].set_ylabel('DM 135',fontsize=8)
+                axes[i-1].set_xlabel('Minutes',fontsize=8)
                 axes[i].grid()
             plt.savefig(name+'_dms.png', dpi=500)
+            plt.show()
             fig.clear()
             plt.close(fig)
             del dms, mov_avg, t
             del fig, axes
-
 
 
 

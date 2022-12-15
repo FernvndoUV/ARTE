@@ -103,6 +103,7 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         os.mkdir(folder)
         os.mkdir(os.path.join(folder, 'logs'))
         os.mkdir(os.path.join(folder, 'misc'))
+        # os.mkdir(os.path.join(folder, 'raw_data'))
     #os.chdir(folder)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((ip_addr, port))
@@ -115,16 +116,21 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         filename = str(datetime.datetime.now())
         tge_filename = os.path.join(folder,'logs', filename)
         misc_filename = os.path.join(folder,'misc', filename)
+        # antenna_filename = os.path.join(folder,'raw_data', filename)
+
         p = multiprocessing.Process(target=write_10gbe_rawdata, name="tge", args=(tge_filename, sock, pkt_size, ))
         p.start()
         roach_control.enable_diode()
-        time.sleep(cal_time)
-        roach.control.disable_diode()
+        time.sleep(1)
+        # time.sleep(cal_time)
+        roach_control.disable_diode()
 
         start = time.time()
         dm_acq.reset_acq(start)
         detections = []
         rfi_data = []
+        # antenna_data = []
+
         while(1): 
             ##if you want to save something else, put it here
             curr_time = time.time()
@@ -158,9 +164,13 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
                         detections=detections,
                         #rfi_data = rfi_data
                     )
+                #np.savez(antenna_filename,
+                         # antenna_data = antenna_data
+                     # )
                 break
             dm_acq.check_time(curr_time)
             det = roach_control.read_frb_detection()
+            # antenna_data.append(utils.get_antenas(roach))
             if(det!=0):
                 detections.append([det, ex_time])
                 roach_control.reset_detection_flag()
