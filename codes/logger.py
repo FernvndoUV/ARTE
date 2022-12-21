@@ -5,6 +5,7 @@ import numpy as np
 import argparse
 from  control import roach_control
 import utils,control
+import read_sensors
 
 
 ###
@@ -119,7 +120,7 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         p.start()
         roach_control.enable_diode()
         time.sleep(cal_time)
-        roach.control.disable_diode()
+        roach_control.disable_diode()
 
         start = time.time()
         dm_acq.reset_acq(start)

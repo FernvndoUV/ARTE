@@ -67,6 +67,7 @@ class read_10gbe_data():
         spectra = np.array((odd, even))
         spectra = np.swapaxes(spectra.T, 0,1)
         spectra = spectra.reshape((-1,2048))
+        spectra = spectra.astype(float)
         return spectra, header
 
     def get_complete(self):
@@ -147,7 +148,9 @@ def get_image_data_temperature(filenames,cal_time=1,spect_time=1e-2,file_time=1 
     ##approximated size for one file
     spect_size = int(file_time*60/spect_time-tails)
     data = np.zeros([len(filenames)*spect_size//decimation, int(flags.shape[0])])
-    clip = np.zeros(len(filenames)*spect_size//decimation, dtype=bool)
+    clip = np.zeros(len(filenames)*spect_size//decimation, dtype=bool)  #antenna0 and 1
+    clip2 = np.zeros(len(filenames)*spect_size//decimation, dtype=bool)  #antenna2
+    clip3 = np.zeros(len(filenames)*spect_size//decimation, dtype=bool)  #antenna3 (reference)
     bases = np.zeros((len(filenames), 2048))
 
 
@@ -180,11 +183,25 @@ def get_image_data_temperature(filenames,cal_time=1,spect_time=1e-2,file_time=1 
 
            #now we look at the clipping
             #ipdb.set_trace()
-            sat = np.bitwise_and(header[:spect_size,1],2**4-1) #just take the cliping values
+            sat = np.bitwise_and(header[:spect_size,1],2**2-1) #just take the cliping values of antennas0,1
             sat = sat[:dec_size*decimation].reshape([-1, decimation])
             sat = np.sum(sat, axis=1)
             sat = np.invert(sat==0)
             clip[i*(spect_size//decimation):(i+1)*(spect_size//decimation)] = sat
+            sat = np.bitwise_and(header[:spect_size,1],2**3) #just take the cliping value of antena2
+            sat = sat[:dec_size*decimation].reshape([-1, decimation])
+            sat = np.sum(sat, axis=1)
+            sat = np.invert(sat==0)
+            clip2[i*(spect_size//decimation):(i+1)*(spect_size//decimation)] = sat
+            sat = np.bitwise_and(header[:spect_size,1],2**4) #just take the cliping value of antena2
+            sat = sat[:dec_size*decimation].reshape([-1, decimation])
+            sat = np.sum(sat, axis=1)
+            sat = np.invert(sat==0)
+            clip3[i*(spect_size//decimation):(i+1)*(spect_size//decimation)] = sat
+
+
+
+
     else:
         for i in range(0, len(filenames)):
             sample = read_10gbe_data(filenames[i])
@@ -198,11 +215,21 @@ def get_image_data_temperature(filenames,cal_time=1,spect_time=1e-2,file_time=1 
             aux = np.mean(aux.astype(float), axis=1)
             data[i*(spect_size//decimation):(i+1)*(spect_size//decimation),flags] = 10*np.log10(aux+1)-111.119
             #now we look at the clipping
-            sat = np.bitwise_and(header[:spect_size,1],2**4-1) #just take the cliping values
+            sat = np.bitwise_and(header[:spect_size,1],2**2-1) #just take the cliping values of antennas0,1
             sat = sat[:dec_size*decimation].reshape([-1, decimation])
             sat = np.sum(sat, axis=1)
             sat = np.invert(sat==0)
             clip[i*(spect_size//decimation):(i+1)*(spect_size//decimation)] = sat
+            sat = np.bitwise_and(header[:spect_size,1],2**3) #just take the cliping value of antena2
+            sat = sat[:dec_size*decimation].reshape([-1, decimation])
+            sat = np.sum(sat, axis=1)
+            sat = np.invert(sat==0)
+            clip2[i*(spect_size//decimation):(i+1)*(spect_size//decimation)] = sat
+            sat = np.bitwise_and(header[:spect_size,1],2**4) #just take the cliping value of antena2
+            sat = sat[:dec_size*decimation].reshape([-1, decimation])
+            sat = np.sum(sat, axis=1)
+            sat = np.invert(sat==0)
+            clip3[i*(spect_size//decimation):(i+1)*(spect_size//decimation)] = sat
 
 
     avg_pow = np.mean(data[:,flags], axis=1)
@@ -211,7 +238,7 @@ def get_image_data_temperature(filenames,cal_time=1,spect_time=1e-2,file_time=1 
     clip = np.invert(clip==0)
     t = np.arange(len(avg_pow))*spect_time/60.*decimation   #time in minutes
 
-    return data, avg_pow, clip, t, bases,flags
+    return data, avg_pow, (clip, clip2,clip3), t, bases,flags
 
 
 def get_dm_data(filenames):
@@ -265,7 +292,7 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
     for i in range(n_img):
         print("%i of %i"%(i+1,n_img))
         sublogs = log_names[i*log_per_img:(i+1)*log_per_img]
-        data, avg_pow, clip, t, bases,flags = get_image_data_temperature(sublogs,cal_time, spect_time,
+        data, avg_pow, clips, t, bases,flags = get_image_data_temperature(sublogs,cal_time, spect_time,
                 file_time, decimation, mov_avg_size, tails)
         hr_i= sublogs[0].split('/')[-1].split('.')[0]
         hr_f= sublogs[-1].split('/')[-1].split('.')[0]
@@ -283,20 +310,23 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
 
 
         if(plot_clip):
-            #find rising/falling edges
-            ind = np.diff(clip.astype(int))
-            ris = np.where(ind==1)[0]
-            fall = np.where(ind==-1)[0]
-            ##check weird cases
-            if(clip[0]):
-                #the first sample is already clipped
-                ris = np.insert(ris,0,0)
-            if(clip[-1]):
-                #the last sample is clipped
-                fall = np.insert(fall, len(fall), len(clip)-1)
-            print("Clipping: \nrising edges: {:} , falling edges: {:}".format(len(ris), len(fall)))
-            for up, down in zip(ris, fall):
-                axes[0].axvspan(t[up], t[down], color='r', alpha=0.3, lw=0)
+            colors = ['r', 'blue','black'] 
+            for i in range(2,-1,-1):
+                clip = clips[i]
+                #find rising/falling edges
+                ind = np.diff(clip.astype(int))
+                ris = np.where(ind==1)[0]
+                fall = np.where(ind==-1)[0]
+                ##check weird cases
+                if(clip[0]):
+                    #the first sample is already clipped
+                    ris = np.insert(ris,0,0)
+                if(clip[-1]):
+                    #the last sample is clipped
+                    fall = np.insert(fall, len(fall), len(clip)-1)
+                print("Clipping: \nrising edges: {:} , falling edges: {:}".format(len(ris), len(fall)))
+                for up, down in zip(ris, fall):
+                    axes[0].axvspan(t[up], t[down], color=colors[i], alpha=0.5, lw=0)
 
         graph = axes[1].pcolormesh(t,freq , data[:len(t),::].T, cmap = 'viridis',vmax = 290,vmin =  200,shading='auto' )
          

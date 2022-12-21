@@ -36,16 +36,14 @@ hwmon6: fan chasis0
 hwmon7: fan chasis1
 hwmon8: fan chasis2
 
-
-
 """
 
 
 def roach_connect(roach_ip, sleep_time=0.5):
     user = 'root'
     tn = telnetlib.Telnet(roach_ip)
-    tn.read_until("login: ")
-    tn.write(user + "\n")
+    tn.read_until("login: ".encode())
+    tn.write((user + "\n").encode())
     time.sleep(sleep_time)
     tn.read_very_eager()
     time.sleep(sleep_time)
@@ -56,7 +54,7 @@ def read_ambient_temp(roach_ip, sleep_time=0.5):
     """
     tn = roach_connect(roach_ip, sleep_time=sleep_time)
     #tn.write('cat /sys/bus/i2c/devices/0-0018/temp1_input \n')
-    tn.write('cat /sys/bus/i2c/devices/0-0018/hwmon/hwmon4/temp1_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0018/hwmon/hwmon4/temp1_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
     time.sleep(sleep_time)
@@ -125,29 +123,34 @@ def pcb_temperature_2(roach_ip, sleep_time=0.5):
 ###
 ###
 def read_temperatures(tn, sleep_time=0.1):
-    tn.write('cat /sys/bus/i2c/devices/0-0018/hwmon/hwmon4/temp1_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0018/hwmon/hwmon4/temp1_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     ambient = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0018/hwmon/hwmon4/temp2_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0018/hwmon/hwmon4/temp2_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     ppc = float(ans.split('\r\n')[1])/1000.
     
-    tn.write('cat /sys/bus/i2c/devices/0-0018/hwmon/hwmon4/temp3_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0018/hwmon/hwmon4/temp3_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     fpga = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-004c/hwmon/hwmon0/temp1_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-004c/hwmon/hwmon0/temp1_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     inlet = float(ans.split('\r\n')[1])/1000. #amp
     
-    tn.write('cat /sys/bus/i2c/devices/0-004e/hwmon/hwmon1/temp1_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-004e/hwmon/hwmon1/temp1_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     outlet = float(ans.split('\r\n')[1])/1000. #amp
 
     return ambient, ppc, fpga, inlet, outlet

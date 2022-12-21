@@ -1,3 +1,5 @@
+import matplotlib 
+matplotlib.use('TkAgg')
 import tkinter as tk
 import tkinter.filedialog as fd
 from tkinter import ttk
