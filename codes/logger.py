@@ -2,11 +2,12 @@ import socket, corr, sys, os, structlog
 import time, datetime, multiprocessing
 import calandigital as calan
 import numpy as np
-import argparse
+import argparse, subprocess
 from  control import roach_control
 import utils,control
 import read_sensors
-
+from mutiprocessing import Process
+from datetime import datetime
 
 ###
 ### Author: Sebastian Jorquera
@@ -29,6 +30,9 @@ parser.add_argument('-tt', '--totaltime', dest='total_time', default=60,
 parser.add_argument('-ri', '--roach_ip', dest='roach_ip', default='10.17.89.91')
 parser.add_argument('-dms', '--dms', dest='dms', nargs="*")
 parser.add_argument('-cal', '--cal', dest='cal_time', default=1, type=float)
+parser.add_argument('-no_temp', '--no_temp', action='store_false')
+parser.add_argument('-temp_time', '--temp_time', dest='temp_time', default=30, type=float) 
+
 
 
 
@@ -51,7 +55,6 @@ def write_10gbe_rawdata(filename, sock, pkt_size):
                 f.close()
 
 class dms_acquisition():
-
     def __init__(self, roach,DMs):
         self.roach = roach
         self.dm_update = np.array(utils.compute_accs(1500., 600., 2048.,DMs))//2*(512/(150*1e6))*1024
@@ -78,11 +81,29 @@ class dms_acquisition():
             self.dedisp_data[ind].append(dm_data)
             self.mov_avg[ind].append(mov_avg)
 
+def measure_temperature(tn, temp_time, temp_filename):
+    """
+    Save the temperature in one folder
+    TODO: add the external sensors
+    """
+    f = open(temp_filename, 'ba')
+    try:
+        while(1):
+            time.sleep(temp_time)
+            ambient, ppc, fpga, inlet, outlet = read_sensors.read_temperatures(tn)
+            ##add the other sensors here!!
+            stamp = datetime.timestamp(datetime.now())
+            packet = np.array((stamp, ambient,ppc,fpga,inlet, outlet))
+            np.savetxt(f, packet)
+    finally:
+        f.close()
+             
+
 
 
 def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         port=1234, roach_ip='10.17.89.91', DMs = [45,90,135,180,225,270,315,360,405,450,495],
-        cal_time=1):
+        cal_time=1, temp=True, temp_time=30):
     """
     Function to save the 10gbe data in a certain folder, like we dont want a 
     super huge file we write several of them with the cpu timestamp.
@@ -104,6 +125,12 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         os.mkdir(folder)
         os.mkdir(os.path.join(folder, 'logs'))
         os.mkdir(os.path.join(folder, 'misc'))
+    if(temp):
+        tn = read_sensors.roach_connect(roach_ip)
+        temp_file = os.path.join(folder, 'temperature')
+        temp_proc = multiprocessing.Process(target=measure_temperature, name='temp', 
+                                            args=(tn, temp_file, temp_time))
+        temp_proc.start() 
     #os.chdir(folder)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((ip_addr, port))
@@ -126,6 +153,7 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         dm_acq.reset_acq(start)
         detections = []
         rfi_data = []
+        antennas_data = []
         while(1): 
             ##if you want to save something else, put it here
             curr_time = time.time()
@@ -157,7 +185,8 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
                         mov_avg9=dm_acq.mov_avg[9],
                         mov_avg10=dm_acq.mov_avg[10],
                         detections=detections,
-                        #rfi_data = rfi_data
+                        #rfi_data = rfi_data,
+                        #antennas = antennas_data
                     )
                 break
             dm_acq.check_time(curr_time)
@@ -166,8 +195,14 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
                 detections.append([det, ex_time])
                 roach_control.reset_detection_flag()
             #rfi_data.append(utils.get_rfi_score(roach))
+            #antennas_data.append(utils.get_antenas(roach))
+
     sock.close()
     f.close()
+    if(temp):
+        temp_proc.terminate()
+        temp_proc.join()
+        tn.close()
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -175,5 +210,5 @@ if __name__ == '__main__':
     print("DMs: {:}".format(dms))
     receive_10gbe_data(folder=args.folder, file_time=args.file_time,total_time=args.total_time,
             ip_addr='192.168.2.10', port=1234, roach_ip=args.roach_ip,
-            DMs=dms, cal_time=args.cal_time)
+            DMs=dms, cal_time=args.cal_time, temp=temp, temp_time=temp_time)
     

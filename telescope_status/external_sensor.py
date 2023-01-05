@@ -8,10 +8,11 @@ class external_sensors():
         self.sock.connect((ip, port))
     
     def ask_measure(self, _sleep=0.01):
-        self.sock.send('ARTE:EXTERNAL_SENSOR')
+        self.sock.send('ARTE:EXTERNAL_SENSOR'.encode())
         time.sleep(_sleep)
         data = self.sock.recv(100)
         data = data.decode()
+        return data
         
         
 

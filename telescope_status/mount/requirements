@@ -1,0 +1,20 @@
+
+##install kstarts; 
+##https://edu.kde.org/kstars/install.php#gnulinux
+
+#install the indiclient
+#https://github.com/indilib/pyindi-client
+#
+
+To control the mounting you need to start a indi-server.. The easy way is just to open kstars and start the server there.
+there is a indiserver command but I havent play too much with it
+
+
+##
+##https://indilib.org/develop/developer-manual/92-indi-server.html
+
+
+##more info
+#https://sourceforge.net/projects/pyindi-client/
+#http://docs.indilib.org/drivers/
+#

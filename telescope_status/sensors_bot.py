@@ -20,8 +20,4 @@ def temperature(message):
     bot.reply_to(message,ans)
     tn.close()
 
-
 bot.polling()
-
-
-
