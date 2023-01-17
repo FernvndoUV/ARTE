@@ -61,13 +61,11 @@ class main_app():
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         self.spect_tab.canvas = canvas
 
-        #self.anim = FuncAnimation(self.spect_tab.fig, self.antenna_animation,
-        #                          interval=50, blit=True)
+        self.anim = FuncAnimation(self.spect_tab.fig, self.antenna_animation,
+                                  interval=50, blit=True)
         #plt.show()
         return 0
 
-    #def update_antenna_plot(self):
-        
 
     
     def antenna_animation(self,i):
@@ -103,9 +101,8 @@ class main_app():
 if __name__ == '__main__':
     root = tk.Tk()
     root.wm_title('ARTE status')
-    note = ttk.Notebook(root)
-    #wind = main_app(root, ROACH_IP, SERVER_ADDR, PYTHON2_ENV)
-    wind = main_app(note, ROACH_IP, SERVER_ADDR, PYTHON2_ENV)
+    #note = ttk.Notebook(root)
+    wind = main_app(root, ROACH_IP, SERVER_ADDR, PYTHON2_ENV)
     def closing():
         root.destroy()
         wind.roach.close()

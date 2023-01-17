@@ -8,7 +8,7 @@ import corr
 ###
 ### hyperparameters
 ###
-roach_ip ='10.17.89.91'
+roach_ip ='192.168.1.18'#'10.17.89.91'
 boffile = 'arte_headers2.fpg' #'arte_gpio.fpg'#'arte_new2.fpg'
 
 ##harcoded parameters
