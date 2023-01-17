@@ -32,8 +32,16 @@ class main_app():
             tabs.append(tab)
             tabControl.add(tab, text=TAB_NAMES[i])
         tabControl.pack(expand=1, fill='both')
+        tabControl.bind("<<NotebookTabChanged>>", self.tab_selected)
         self.antenna_spectrum(tabs[0])
 
+    def tab_selected(self, event):
+        sel_tab = event.widget.select()
+        tab_text = event.widget.tab(sel_tab, 'text')
+        if(tab_text==TAB_NAMES[0]):
+            self.anim.event_source.start()
+        else:
+            self.anim.event_source.stop()
 
     def antenna_spectrum(self, tab):
         ###
@@ -66,8 +74,37 @@ class main_app():
         #plt.show()
         return 0
 
+    def beam_spectrum(self, tab):
+        self.beam_tab = tab_class(tab)
+        y_lim = (0,100)
+        self.beam_tab = tab_class(tab)
+        self.beam_tab.freq = np.linspace(1200,1800,2048,endpoint=False)
+        self.beam_tab.fig, self.beam_tab.axes = plt.subplots(1)
+        self.beam_tab.data = []
 
+        canvas = FigureCanvasTkAgg(self.beam_tab.fig, tab)
+
+
+        self.beam_tab.axes[i,j].set_ylim(y_lim)
+        self.beam_tab.axes[i,j].set_xlim(1200,1800)
+        self.beam_tab.axes[i,j].set_title('Antenna %i' %(i+j))
+        self.beam_tab.axes[i,j].grid()
+        line, = self.beam_tab.axes[i,j].plot([],[])
+        self.beam_tab.data.append(line)
     
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        self.beam_tab.canvas = canvas
+
+        self.anim = FuncAnimation(self.beam_tab.fig, self.beam_animation,
+                                  interval=50, blit=True)
+        #plt.show()
+        return 0
+        
+
+    ### 
+    ### antennas animation functions
+    ###
     def antenna_animation(self,i):
         dat = self.get_roach_antennas()
         for i in range(4):
@@ -75,8 +112,6 @@ class main_app():
             self.spect_tab.data[i].set_data(self.spect_tab.freq, spec)
             #data = self.spect_tab.data
         return self.spect_tab.data
-
-   
 
     def get_roach_antennas(self, dwidth=32, dtype=">I"):
         ###
@@ -87,14 +122,17 @@ class main_app():
         for i in range(len(brams)):
             antenas[i,:] =  self.roach.read_data(brams[i], awidth=11,dwidth=dwidth,dtype=dtype)
         return antenas
-
-
-    def animate(i):
-        dat = utils.get_antenas(fpga)
-        for i in range(4):
-            spec = 10*np.log10(dat[i,:]+1)
-            data[i].set_data(freq, spec)
-        return data
+    
+    ###
+    ### beam animation functions
+    ###
+    
+    def beam_animation(self, i):
+        beam = self.roach.read_data(self.roach, 'beam', awidth=11, dwidth=32, dtype='>I')
+        beam = 10.*np.log10(beam)
+        self.beam_tab.data[0].set_data(self.beam_tab.freq, beam)
+        return self.beam_tab.data
+    
 
 
 

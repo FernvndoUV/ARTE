@@ -99,16 +99,27 @@ def measure_temperature(tn,temp_filename, temp_time):
     finally:
         f.close()
 
-def get_misc_data(filename, dm_acq):
+def get_misc_data(misc_filename, dm_acq, roach_ip, DMs):
     """
     Get miscellaneous data (antennas, rfi, etc)
     """
+    roach = corr.katcp_wrapper.FpgaClient(roach_ip)
+    roach_control = control.roach_control(roach)
+    time.sleep(1)
+    dm_acq = dms_acquisition(roach,DMs)
+
+    start = time.time()
     dm_acq.reset_acq(start)
     detections = []
     rfi_data = []
     antennas_data = []
+    a = 0
     try:
         while(1):
+            print(a)
+            a +=1
+            curr_time = time.time()
+            ex_time = curr_time-start
             dm_acq.check_time(curr_time)
             det = roach_control.read_frb_detection()
             if(det!=0):
@@ -144,6 +155,7 @@ def get_misc_data(filename, dm_acq):
                     #rfi_data = rfi_data,
                     antennas = antennas_data
                 )
+            roach.stop()
 
 
 
@@ -174,8 +186,7 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
     if(temp):
         tn = read_sensors.roach_connect(roach_ip)
         temp_file = os.path.join(folder, 'temperature')
-        temp_proc = multiprocessing.Process(target=measure_temperature, name='temp',
-                                            args=(tn, temp_file, temp_time))
+        temp_proc = multiprocessing.Process(target=measure_temperature, name='temp',args=(tn, temp_file, temp_time))
         temp_proc.start()
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -190,17 +201,14 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         tge_filename = os.path.join(folder,'logs', filename)
         misc_filename = os.path.join(folder,'misc', filename)
         tge_process = multiprocessing.Process(target=write_10gbe_rawdata, name="tge", args=(tge_filename, sock, pkt_size, ))
-        misc_process = multiprocessing.Process(target=get_misc_data, name="misc", args=(misc_filename, dm_acq, ))
+        misc_process = multiprocessing.Process(target=get_misc_data, name="misc", args=(misc_filename, dm_acq, roach_ip, DMs,))
         tge_process.start()
         misc_process.start()
         roach_control.enable_diode()
         time.sleep(cal_time)
         roach_control.disable_diode()
         start = time.time()
-        dm_acq.reset_acq(start)
-        detections = []
-        rfi_data = []
-        antennas_data = []
+        #dm_acq.reset_acq(start)
         while(1):
             ##if you want to save something else, put it here
             curr_time = time.time()
@@ -226,4 +234,3 @@ if __name__ == '__main__':
     receive_10gbe_data(folder=args.folder, file_time=args.file_time,total_time=args.total_time,
             ip_addr='192.168.2.10', port=1234, roach_ip=args.roach_ip,
             DMs=dms, cal_time=args.cal_time, temp=args.no_temp, temp_time=args.temp_time)
-    
