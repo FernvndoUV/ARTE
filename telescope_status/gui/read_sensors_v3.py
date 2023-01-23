@@ -40,26 +40,26 @@ hwmon8: fan chasis2
 """
 class telnet_roach():
     def __init__(self, roach_ip):
+        print('Dummy telnet')
         self.msg = ''
-        return 1
     
     def write(self, msg):
         self.msg = msg+'\r\n'
         
-    def read_very_eager(self) 
+    def read_very_eager(self):
         resp = np.random.randint(low=1000, high=30000)
-        out = msg +resp+'\r\n'
+        out = self.msg +resp+'\r\n'
+        self.msg = ''
         return out
     
     def close(self):
-        return 1
-        
+       print('Closing telnet') 
         
 
 
-def roach_connect(roach_ip, sleep_time=0.5m debug=False):
+def roach_connect(roach_ip, sleep_time=0.5, debug=False):
     if(debug):
-        tn = telnet_roach()
+        tn = telnet_roach(roach_ip)
         return tn
     else:
         user = 'root'
@@ -276,6 +276,10 @@ def read_all_sensors(roach_ip, sleep_time=0.1):
 
     [curr3_3v, curr2_5v, curr1_8v, 
      curr1_5v, curr1v, curr5v, curr12v] = read_currents(tn, sleep_time=sleep_time)
+    return [ambient, ppc, fpga, inlet, outlet, volt1v, volt1_5v, volt1_8v, volt2_5v, 
+            volt3_3v, volt5v, volt12v, volt3_3v2, volt5v2, curr3_3v, curr2_5v, curr1_8v, 
+            curr1_5v, curr1v, curr5v, curr12v]
+
 
       
 

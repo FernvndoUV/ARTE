@@ -5,6 +5,7 @@ import calandigital as calan
 import re
 import argparse
 from config import *
+import numpy as np
 
 
 parser = argparse.ArgumentParser(
@@ -126,6 +127,10 @@ class calan_python2():
         elif(cmd=='write'):
             ans = self.write(params[0], data, offset=params[1])
             self.connection.sendall(ans.encode()) 
+        elif(cmd=='read_snapshots'):
+            brams = params[0].split(' ')
+            print(params[1])
+            ans = self.read_snapshots(brams, int(params[1]), dtype=params[2])
              
             
 
@@ -168,7 +173,11 @@ class calan_python2():
         self.ans_read_cmd(data)
         return 1
 
-    def read_snapshots(self, snapshots, dtype='>i1'):
+    def read_snapshots(self, snapshots,  samples, dtype='>i1'):
+        data = calan.read_snapshots(self.roach, snapshots, dtype=dtype)
+        data = np.array(data).flatten()
+        data = data.tobytes()
+        self.ans_read_cmd(data)
         return 1
 
     def write(self, name, data, offset=0):

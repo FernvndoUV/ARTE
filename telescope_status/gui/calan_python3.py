@@ -135,11 +135,24 @@ class calan_python3():
         data = np.frombuffer(data, float)
         print(data)
         ##we need to reshape this!
-        return 1
+        return data
 
 
-    def read_snapshots(self, snapshots, dtype='>i1'):
-        return 1
+    def read_snapshots(self, snapshots, samples, dtype='>i1'):
+        cmd = 'read_snapshots'
+        snap = ''
+        for s in snapshots:
+            snap +=s+' '
+        snap = snap[:-1]
+        params = snap+','+str(samples)+','+dtype   
+        self.send_msg(cmd, params)
+        time.sleep(0.1)
+        msg = self.recv_msg()
+        cmd, params, data = self.parse_msg(msg)
+        data = np.frombuffer(data, dtype)
+        data = data.reshape((4,-1)) ##check!
+        print(data)
+        return data
 
     def write(self, name, values, offset=0):
         cmd = "write"

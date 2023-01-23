@@ -11,9 +11,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg#, NavigationTool
 from calan_python3 import calan_python3 
 from matplotlib.animation import FuncAnimation
 import multiprocessing
+import read_sensors_v3
 #sys.path.append('../../codes')
 #import utils
-
 
 class tab_class():
     def __init__(self, tab):
@@ -23,6 +23,7 @@ class main_app():
     def __init__(self, top, roach_ip, server_ip, python2_interpreter):
         #connect to the roach
         self.roach = calan_python3(server_ip, roach_ip, python2_interpreter)
+        self.tn = read_sensors_v3.roach_connect(roach_ip, debug=DEBUG)   ##telnet connection
         time.sleep(1)
         ##
         tabControl = ttk.Notebook(top)
@@ -34,20 +35,63 @@ class main_app():
         tabControl.pack(expand=1, fill='both')
         tabControl.bind("<<NotebookTabChanged>>", self.tab_selected)
         self.antenna_spectrum(tabs[0])
+        self.beam_spectrum(tabs[1])
+        self.adc_inputs(tabs[2])
+        self.temperature_tab(tabs[3])
+        
+        #self.temp_proc = multiprocessing.Process(target=self.get_temperature)
+        #self.temp_proc.start()
 
     def tab_selected(self, event):
+        """
+        Handle the update of the opened tab and halt the other tab animations
+        """
         sel_tab = event.widget.select()
         tab_text = event.widget.tab(sel_tab, 'text')
+        print(tab_text)
         if(tab_text==TAB_NAMES[0]):
-            self.anim.event_source.start()
+            if('self.beam_tab.anim' in locals()):
+                self.beam_tab.anim.pause()
+
+            if('self.adc_tab.anim' in locals()):
+                self.adc_tab.anim.pause()
+            ###
+            if('self.spect_tab.anim' in locals()):
+                self.spect_tab.anim.resume()
+            else:
+                self.spect_tab.anim = FuncAnimation(self.spect_tab.fig, self.antenna_animation,
+                                                    interval=50, blit=True)
+        elif(tab_text == TAB_NAMES[1]):
+            self.spect_tab.anim.pause()
+            if('self.adc_tab.anim' in locals()):
+                self.adc_tab.anim.pause()
+            
+            if('self.beam_tab.anim' in locals()):
+                self.beam_tab.anim.resume()
+            else:
+                self.beam_tab.anim = FuncAnimation(self.beam_tab.fig, self.beam_animation,
+                                                    interval=50, blit=True)
+        elif(tab_text == TAB_NAMES[2]):
+            self.spect_tab.anim.pause()
+            if('self.beam_tab.anim' in locals()):
+                self.beam_tab.anim.pause()
+
+            if('self.adc_tab.anim' in locals()):
+                self.adc_tab.anim.resume()
+            else:
+                self.adc_tab.anim =  FuncAnimation(self.beam_tab.fig, self.adc_animation,
+                                                    interval=50, blit=True)
         else:
-            self.anim.event_source.stop()
+            if('self.beam_tab.anim' in locals()):
+                self.beam_tab.anim.pause()
+
+            if('self.adc_tab.anim' in locals()):
+                self.adc_tab.anim.pause()
+
+            if('self.spect_tab.anim' in locals()):
+                self.spect_tab.anim.pause()
 
     def antenna_spectrum(self, tab):
-        ###
-        ### Real time update?
-        ###
-        self.spect_tab = tab_class(tab)
         y_lim = (0,100)
         self.spect_tab = tab_class(tab)
         self.spect_tab.freq = np.linspace(1200,1800,2048,endpoint=False)
@@ -55,7 +99,6 @@ class main_app():
         self.spect_tab.data = []
 
         canvas = FigureCanvasTkAgg(self.spect_tab.fig, tab)
-
         for i in range(2):
             for j in range(2):
                 self.spect_tab.axes[i,j].set_ylim(y_lim)
@@ -64,43 +107,84 @@ class main_app():
                 self.spect_tab.axes[i,j].grid()
                 line, = self.spect_tab.axes[i,j].plot([],[])
                 self.spect_tab.data.append(line)
-    
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         self.spect_tab.canvas = canvas
-
-        self.anim = FuncAnimation(self.spect_tab.fig, self.antenna_animation,
-                                  interval=50, blit=True)
-        #plt.show()
         return 0
 
     def beam_spectrum(self, tab):
-        self.beam_tab = tab_class(tab)
         y_lim = (0,100)
         self.beam_tab = tab_class(tab)
         self.beam_tab.freq = np.linspace(1200,1800,2048,endpoint=False)
         self.beam_tab.fig, self.beam_tab.axes = plt.subplots(1)
         self.beam_tab.data = []
-
         canvas = FigureCanvasTkAgg(self.beam_tab.fig, tab)
-
-
-        self.beam_tab.axes[i,j].set_ylim(y_lim)
-        self.beam_tab.axes[i,j].set_xlim(1200,1800)
-        self.beam_tab.axes[i,j].set_title('Antenna %i' %(i+j))
-        self.beam_tab.axes[i,j].grid()
-        line, = self.beam_tab.axes[i,j].plot([],[])
+        self.beam_tab.axes.set_ylim(y_lim)
+        self.beam_tab.axes.set_xlim(1200,1800)
+        self.beam_tab.axes.set_title('Beam')
+        self.beam_tab.axes.grid()
+        line, = self.beam_tab.axes.plot([],[])
         self.beam_tab.data.append(line)
     
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         self.beam_tab.canvas = canvas
-
-        self.anim = FuncAnimation(self.beam_tab.fig, self.beam_animation,
-                                  interval=50, blit=True)
-        #plt.show()
         return 0
+    
+    def adc_inputs(self, tab):
+        y_lim = (-130,130)
+        self.adc_tab = tab_class(tab)
+        self.adc_tab.x = np.arange(ADC_SAMPLES)  ##check!
+        self.adc_tab.fig, self.adc_tab.axes = plt.subplots(2,2)
+        self.adc_tab.data = []
+
+        canvas = FigureCanvasTkAgg(self.adc_tab.fig, tab)
+        for i in range(2):
+            for j in range(2):
+                self.adc_tab.axes[i,j].set_ylim(y_lim)
+                self.adc_tab.axes[i,j].set_xlim(0,self.adc_tab.x[-1])
+                self.adc_tab.axes[i,j].set_title('Antenna %i' %(i+j))
+                self.adc_tab.axes[i,j].grid()
+                line, = self.adc_tab.axes[i,j].plot([],[])
+                self.adc_tab.data.append(line)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        self.adc_tab.canvas = canvas
+        return 0
+
+    def temperature_tab(self, tab):
+        """
+        """
+        self.temp_tab = tab_class(tab)
         
+        ###roach_sensors
+        self.temp_tab.text = []
+        self.temp_tab.vars = []
+        sensors_names = [
+            'ambient temperature', 'ppc temperature', 'fpga temperature', 'inlet temperature',
+            'outlet temperature', '1V', '1.5V', '1.8V', '2.5V', '3.3V', '5V', '12V',
+            '3.3V (2)', '5V (2)', '3.3V current', '2.5V current', '3.3V current',
+            '2.5V current', '1.8V current', '1.5V current', '1V current', '5V current',
+            '12V current']
+        for i in range(len(sensors_names)//2):
+            name = sensors_names[2*i]
+            text = tk.Label(self.temp_tab.tab, text=name+' :')
+            text.grid(row=i//2, column=i%4, padx=2, pady=3, sticky='n')
+            var = tk.StringVar(value='0.1')
+            self.temp_tab.vars.append(var)
+            label = tk.Label(self.temp_tab.tab, textvariable=self.temp_tab.vars[-1], background='white')
+            label.grid(row=i//2, column=i%4+1, padx=2, pady=3, sticky='n')
+
+            name = sensors_names[2*i+1]
+            text = tk.Label(self.temp_tab.tab, text=name+' :')
+            text.grid(row=i//2, column=i%4+2, padx=2, pady=3, sticky='n')
+            var = tk.StringVar(value='0.1')
+            self.temp_tab.vars.append(var)
+            label = tk.Label(self.temp_tab.tab, textvariable=self.temp_tab.vars[-1], background='white')
+            label.grid(row=i//2, column=i%4+3, padx=2, pady=3, sticky='n')
+
+        
+
 
     ### 
     ### antennas animation functions
@@ -128,11 +212,52 @@ class main_app():
     ###
     
     def beam_animation(self, i):
-        beam = self.roach.read_data(self.roach, 'beam', awidth=11, dwidth=32, dtype='>I')
-        beam = 10.*np.log10(beam)
+        beam = self.roach.read_data('beam', awidth=11, dwidth=32, dtype='>I')
+        beam = 10.*np.log10(beam+1)
         self.beam_tab.data[0].set_data(self.beam_tab.freq, beam)
         return self.beam_tab.data
     
+    ###
+    ### ADC inputs animation functions
+    ###
+    
+    def adc_animation(self,i):
+        ##CHECK the names!!!
+        dat = self.get_adc_samples()
+        for i in range(4):
+            self.adc_tab.data[i].set_data(self.adc_tab.x, dat)
+            #data = self.spect_tab.data
+        return self.adc_tab.data
+          
+
+    def get_adc_samples(self):
+        snaps = ['adcsnap0', 'adcsnap1', 'adcsnap2', 'adcsnap3']
+        samples = self.roach.read_snapshots(snaps, ADC_SAMPLES, dtype='>i1')
+        return samples
+        
+    ###
+    ### Temperature monitor
+    ###
+    def get_temperature(self):
+        start = time.time()
+        try:
+            while(1):
+                val = start-time.time()
+                if(val> SENSOR_TIMESTEP):
+                    sensor_vals = read_sensors_v3.read_all_sensors(self.tn)
+                    for i,var in zip(range(len(sensor_vals)),sensor_vals):
+                        print(i)
+                        self.temp_tab.vars[i].set(str(var))
+                    start = time.time()
+        except:
+            print('Killing sensor read process')
+            self.tn.close()
+
+
+                    
+                        
+                
+
 
 
 
@@ -144,6 +269,7 @@ if __name__ == '__main__':
     def closing():
         root.destroy()
         wind.roach.close()
+        wind.temp_proc.kill()
     #root.resizable(False, False)
     root.protocol("WM_DELETE_WINDOW", closing)
     root.mainloop()
