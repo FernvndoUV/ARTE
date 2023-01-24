@@ -22,6 +22,7 @@ class tab_class():
 class main_app():
     def __init__(self, top, roach_ip, server_ip, python2_interpreter):
         #connect to the roach
+        self.top = top
         self.roach = calan_python3(server_ip, roach_ip, python2_interpreter)
         self.tn = read_sensors_v3.roach_connect(roach_ip, debug=DEBUG)   ##telnet connection
         time.sleep(1)
@@ -38,9 +39,9 @@ class main_app():
         self.beam_spectrum(tabs[1])
         self.adc_inputs(tabs[2])
         self.temperature_tab(tabs[3])
-        
-        self.temp_proc = multiprocessing.Process(target=self.get_temperature)
-        self.temp_proc.start()
+        #self.temp_proc = multiprocessing.Process(target=self.get_temperature)
+        #self.temp_proc.start()
+        self.get_temperature()
 
     def tab_selected(self, event):
         """
@@ -182,8 +183,8 @@ class main_app():
             text.grid(row=i, column=2, padx=10, pady=3, sticky='n')
             var = tk.StringVar(value='0.1')
             self.temp_tab.vars.append(var)
-            #label = tk.Label(self.temp_tab.tab, textvariable=self.temp_tab.vars[-1], background='white',width=20)
-            label = tk.Label(self.temp_tab.tab, text="0.1", background='white',width=20)
+            label = tk.Label(self.temp_tab.tab, textvariable=self.temp_tab.vars[-1], background='white',width=20)
+            #label = tk.Label(self.temp_tab.tab, text="0.1", background='white',width=20)
             label.grid(row=i, column=3, padx=2, pady=3, sticky='n')
             self.temp_tab.text.append(label)
 
@@ -243,6 +244,18 @@ class main_app():
     ### Temperature monitor
     ###
     def get_temperature(self):
+        try:
+            sensor_vals = read_sensors_v3.read_all_sensors('qwe', self.tn)
+            for i,var in zip(range(len(sensor_vals)),sensor_vals):
+                print(i)
+                self.temp_tab.vars[i].set(str(var))
+                #self.temp_tab.text[i].configure(text=str(var))
+        except:
+            self.tn = read_sensors_v3.roach_connect(roach_ip, debug=DEBUG)   ##telnet connection
+        self.top.after(SENSOR_TIMESTEP*1000, self.get_temperature)
+            
+    """
+    def get_temperature(self):
         start = time.time()
         try:
             while(1):
@@ -262,6 +275,7 @@ class main_app():
         finally:
             print('Killing sensor read process')
             self.tn.close()
+    """
 
 
                     
@@ -279,7 +293,7 @@ if __name__ == '__main__':
     def closing():
         root.destroy()
         wind.roach.close()
-        wind.temp_proc.kill()
+        #wind.temp_proc.kill()
     #root.resizable(False, False)
     root.protocol("WM_DELETE_WINDOW", closing)
     root.mainloop()
