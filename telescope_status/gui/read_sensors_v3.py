@@ -44,13 +44,13 @@ class telnet_roach():
         self.msg = ''
     
     def write(self, msg):
-        self.msg = msg+'\r\n'
+        self.msg = msg.decode()+'\r\n'
         
     def read_very_eager(self):
         resp = np.random.randint(low=1000, high=30000)
-        out = self.msg +resp+'\r\n'
+        out = self.msg +(str(resp)+'\r\n')
         self.msg = ''
-        return out
+        return out.encode()
     
     def close(self):
        print('Closing telnet') 
@@ -179,49 +179,58 @@ def read_temperatures(tn, sleep_time=0.1):
 
 
 def read_voltages(tn, sleep_time=0.1):
-    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in0_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in0_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     volt1v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in1_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in1_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     volt1_5v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in2_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in2_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     volt1_8v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in3_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in3_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     volt2_5v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in4_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in4_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     volt3_3v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in5_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in5_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     volt5v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in6_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in6_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     volt12v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in7_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/in7_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     volt3_3v2 = float(ans.split('\r\n')[1])/1000.
     
-    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in6_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in6_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     volt5v2 = float(ans.split('\r\n')[1])/1000.
 
     return [volt1v, volt1_5v, volt1_8v, volt2_5v, volt3_3v, 
@@ -230,46 +239,54 @@ def read_voltages(tn, sleep_time=0.1):
 
 
 def read_currents(tn, sleep_time=0.1):
-    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in0_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in0_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     curr3_3v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in1_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in1_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     curr2_5v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in2_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in2_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     curr1_8v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in3_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in3_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     curr1_5v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in4_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in4_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     curr1v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in6_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0051/hwmon/hwmon3/in6_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     curr5v = float(ans.split('\r\n')[1])/1000.
 
-    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/curr1_input \n')
+    tn.write('cat /sys/bus/i2c/devices/0-0050/hwmon/hwmon2/curr1_input \n'.encode())
     time.sleep(sleep_time)
     ans = tn.read_very_eager()
+    ans = ans.decode()
     curr12v = float(ans.split('\r\n')[1])/1000. #amp
 
     return curr3_3v, curr2_5v, curr1_8v, curr1_5v, curr1v, curr5v, curr12v
     
 
-def read_all_sensors(roach_ip, sleep_time=0.1):
-    tn = roach_connect(roach_ip, sleep_time=sleep_time)
+def read_all_sensors(roach_ip, tn=None,sleep_time=0.1):
+    if(tn is None):
+        tn = roach_connect(roach_ip, sleep_time=sleep_time)
     ambient, ppc, fpga, inlet, outlet = read_temperatures(tn, sleep_time=sleep_time)
     [volt1v, volt1_5v, volt1_8v, volt2_5v, volt3_3v, 
             volt5v, volt12v, volt3_3v2, volt5v2] = read_voltages(tn, sleep_time=sleep_time)
