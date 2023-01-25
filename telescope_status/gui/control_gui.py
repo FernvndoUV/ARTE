@@ -34,62 +34,69 @@ class main_app():
             tabs.append(tab)
             tabControl.add(tab, text=TAB_NAMES[i])
         tabControl.pack(expand=1, fill='both')
-        #tabControl.bind("<<NotebookTabChanged>>", self.tab_selected)
+        tabControl.bind("<<NotebookTabChanged>>", self.tab_selected)
+
         self.antenna_spectrum(tabs[0])
         self.beam_spectrum(tabs[1])
         self.adc_inputs(tabs[2])
+        ##temperature
         self.temperature_tab(tabs[3])
+        self.temp_queue = multiprocessing.Queue()
         #self.temp_proc = multiprocessing.Process(target=self.get_temperature)
         #self.temp_proc.start()
-        self.get_temperature()
+        #self.get_temperature()
+        
+
 
     def tab_selected(self, event):
         """
         Handle the update of the opened tab and halt the other tab animations
         """
+        #print(self.tabControl.select(self.tabs[1]))
         sel_tab = event.widget.select()
         tab_text = event.widget.tab(sel_tab, 'text')
         print(tab_text)
         if(tab_text==TAB_NAMES[0]):
-            if('self.beam_tab.anim' in locals()):
+            if(hasattr(self.beam_tab,'anim')):
                 self.beam_tab.anim.pause()
 
-            if('self.adc_tab.anim' in locals()):
+            if(hasattr(self.adc_tab, 'anim')):
                 self.adc_tab.anim.pause()
             ###
-            if('self.spect_tab.anim' in locals()):
+            if(hasattr(self.spect_tab, 'anim')):
                 self.spect_tab.anim.resume()
             else:
                 self.spect_tab.anim = FuncAnimation(self.spect_tab.fig, self.antenna_animation,
                                                     interval=50, blit=True)
         elif(tab_text == TAB_NAMES[1]):
             self.spect_tab.anim.pause()
-            if('self.adc_tab.anim' in locals()):
+            if(hasattr(self.adc_tab,'anim')):
                 self.adc_tab.anim.pause()
-            
-            if('self.beam_tab.anim' in locals()):
+    
+            if(hasattr(self.beam_tab,'anim')):
                 self.beam_tab.anim.resume()
             else:
                 self.beam_tab.anim = FuncAnimation(self.beam_tab.fig, self.beam_animation,
                                                     interval=50, blit=True)
         elif(tab_text == TAB_NAMES[2]):
             self.spect_tab.anim.pause()
-            if('self.beam_tab.anim' in locals()):
+            if(hasattr(self.beam_tab, 'anim')):
                 self.beam_tab.anim.pause()
 
-            if('self.adc_tab.anim' in locals()):
+            if(hasattr(self.adc_tab,'anim')):
                 self.adc_tab.anim.resume()
             else:
                 self.adc_tab.anim =  FuncAnimation(self.beam_tab.fig, self.adc_animation,
                                                     interval=50, blit=True)
         else:
-            if('self.beam_tab.anim' in locals()):
+            print('Else')
+            if(hasattr(self.beam_tab, 'anim')):
                 self.beam_tab.anim.pause()
 
-            if('self.adc_tab.anim' in locals()):
+            if(hasattr(self.adc_tab, 'anim')):
                 self.adc_tab.anim.pause()
 
-            if('self.spect_tab.anim' in locals()):
+            if(hasattr(self.spect_tab, 'anim')):
                 self.spect_tab.anim.pause()
 
     def antenna_spectrum(self, tab):
@@ -243,7 +250,17 @@ class main_app():
     ###
     ### Temperature monitor
     ###
-    def get_temperature(self):
+    def get_temperature(self, q, tn):
+        sensor_vals = read_sensors_v3.read_all_sensors(self.roach_ip)
+        q.put(sensor_vals)
+
+    def update_temperature(self):
+        if(not q.empty()):
+            var = q.get()
+            for i,var in zip(range(len(sensor_vals)),sensor_vals):
+                print(i)
+                self.temp_tab.vars[i].set(str(var))
+
         try:
             sensor_vals = read_sensors_v3.read_all_sensors('qwe', self.tn)
             for i,var in zip(range(len(sensor_vals)),sensor_vals):

@@ -112,7 +112,7 @@ class calan_python2():
         """
     
     def cmds(self, cmd, params,data):
-        print(cmd)
+        logging.debug(cmd)
         if(cmd=='initialize_roach'):
             ans = self.initialize_roach(params[0], params[1])
             self.connection.sendall(ans.encode()) 
@@ -129,7 +129,6 @@ class calan_python2():
             self.connection.sendall(ans.encode()) 
         elif(cmd=='read_snapshots'):
             brams = params[0].split(' ')
-            print(params[1])
             ans = self.read_snapshots(brams, int(params[1]), dtype=params[2])
              
             
@@ -154,21 +153,21 @@ class calan_python2():
 
     def read_data(self, bram, awidth, dwidth, dtype):
         data = calan.read_data(self.roach, bram, int(awidth), int(dwidth), dtype)
-        print(data)
+        logging.debug(data)
         data = data.tobytes()
         self.ans_read_cmd(data) 
         return 1
 
     def read_deinterleave_data(self,bram, dfactor, awidth, dwidth, dtype):
         data = calan.read_deinterleave_data(self.roach, bram, dfactor, awidth, dwidth, dtype)
-        print(data)
+        logging.debug(data)
         data = data.tobytes()
         self.ans_read_cmd(data)
         return 1
 
     def read_interleave_data(self, brams, awidth, dwidth, dtype):
         data = calan.read_interleave_data(self.roach, brams, int(awidth), int(dwidth), dtype)
-        print(data)
+        logging.debug(data)
         data = data.tobytes()
         self.ans_read_cmd(data)
         return 1

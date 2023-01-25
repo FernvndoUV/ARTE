@@ -87,7 +87,7 @@ class calan_python3():
         params = ip+','+boffile
         self.send_msg(cmd, params)
         ans = self.sock.recv(128)
-        print(ans)
+        logging.debug(ans)
         return ans
     
     def float2fixed(self, data, nbits, binpt, signed=True, warn=False):
@@ -102,7 +102,7 @@ class calan_python3():
         cmd,params,data = self.parse_msg(msg)
         ##the calan digital converts the data to float..
         data = np.frombuffer(data, float)
-        print(data)
+        logging.debug(data)
         return data
     
     def read_interleave_data(self, brams, awidth, dwidth, dtype):
@@ -120,7 +120,7 @@ class calan_python3():
         cmd,params,data = self.parse_msg(msg)
         ##the calan digital converts the data to float..
         data = np.frombuffer(data, float)
-        print(data)
+        logging.debug(data)
         return data
 
     def read_deinterleave_data(self,bram, dfactor, awidth, dwidth, dtype):
@@ -133,7 +133,7 @@ class calan_python3():
         cmd,params,data = self.parse_msg(msg)
         ##the calan digital converts the data to float..
         data = np.frombuffer(data, float)
-        print(data)
+        logging.debug(data)
         ##we need to reshape this!
         return data
 
@@ -151,7 +151,7 @@ class calan_python3():
         cmd, params, data = self.parse_msg(msg)
         data = np.frombuffer(data, dtype)
         data = data.reshape((4,-1)) ##check!
-        print(data)
+        logging.debug(data)
         return data
 
     def write(self, name, values, offset=0):
@@ -159,7 +159,7 @@ class calan_python3():
         params = name+','+str(offset)
         self.send_msg(cmd, params,values)
         ans = self.sock.recv(128)
-        print(ans)
+        logging.debug(ans)
         return ans
 
     def write_interleaved_data(self,brams, data):
