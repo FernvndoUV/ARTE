@@ -1,6 +1,6 @@
 ##hyperparameters
-#PYTHON2_ENV="/usr/bin/python2.7"
-PYTHON2_ENV="/home/roach/roach_env/bin/python2.7"
+PYTHON2_ENV="/usr/bin/python2.7"
+#PYTHON2_ENV="/home/roach/roach_env/bin/python2.7"
 RECV_LEN=128
 SERVER_ADDR="./uds_socket"
 DEBUG = True

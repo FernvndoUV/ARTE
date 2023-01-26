@@ -24,7 +24,6 @@ class main_app():
         #connect to the roach
         self.top = top
         self.roach = calan_python3(server_ip, roach_ip, python2_interpreter)
-        self.tn = read_sensors_v3.roach_connect(roach_ip, debug=DEBUG)   ##telnet connection
         time.sleep(1)
         ##
         tabControl = ttk.Notebook(top)
@@ -42,9 +41,9 @@ class main_app():
         ##temperature
         self.temperature_tab(tabs[3])
         self.temp_queue = multiprocessing.Queue()
-        #self.temp_proc = multiprocessing.Process(target=self.get_temperature)
-        #self.temp_proc.start()
-        #self.get_temperature()
+        self.temp_proc = multiprocessing.Process(target=self.get_temperature, args=(self.temp_queue,roach_ip))
+        self.temp_proc.start()
+        self.update_temperature()
         
 
 
@@ -180,8 +179,8 @@ class main_app():
             text.grid(row=i, column=0, padx=2, pady=3, sticky='n')
             var = tk.StringVar(value='0.1')
             self.temp_tab.vars.append(var)
-            #label = tk.Label(self.temp_tab.tab, textvariable=self.temp_tab.vars[-1], background='white', width=20)
-            label = tk.Label(self.temp_tab.tab, text="0.1", background='white', width=20)
+            label = tk.Label(self.temp_tab.tab, textvariable=self.temp_tab.vars[-1], background='white', width=20)
+            #label = tk.Label(self.temp_tab.tab, text="0.1", background='white', width=20)
             label.grid(row=i, column=1, padx=2, pady=3, sticky='n')
             self.temp_tab.text.append(label)
 
@@ -250,54 +249,31 @@ class main_app():
     ###
     ### Temperature monitor
     ###
-    def get_temperature(self, q, tn):
-        sensor_vals = read_sensors_v3.read_all_sensors(self.roach_ip)
-        q.put(sensor_vals)
+    def get_temperature(self, q, roach_ip):
+        """
+        Function to get the current sensors values, running in a thread
+        """
+        tn = read_sensors_v3.roach_connect(roach_ip, debug=DEBUG)   ##telnet connection
+        while(1):
+            try:
+                time.sleep(SENSOR_TIMESTEP)
+                print('reading sensors')
+                sensor_vals = read_sensors_v3.read_all_sensors(roach_ip,tn=tn)
+                print(sensor_vals)
+                q.put(sensor_vals)
+            except:
+                print('Error reading sensors')
+                tn.close()
 
     def update_temperature(self):
-        if(not q.empty()):
-            var = q.get()
+        if(self.temp_queue.empty()):
+            self.top.after(SENSOR_TIMESTEP*50, self.update_temperature)
+        else:
+            sensor_vals = self.temp_queue.get()
             for i,var in zip(range(len(sensor_vals)),sensor_vals):
-                print(i)
                 self.temp_tab.vars[i].set(str(var))
+            self.top.after(SENSOR_TIMESTEP*50, self.update_temperature)
 
-        try:
-            sensor_vals = read_sensors_v3.read_all_sensors('qwe', self.tn)
-            for i,var in zip(range(len(sensor_vals)),sensor_vals):
-                print(i)
-                self.temp_tab.vars[i].set(str(var))
-                #self.temp_tab.text[i].configure(text=str(var))
-        except:
-            self.tn = read_sensors_v3.roach_connect(roach_ip, debug=DEBUG)   ##telnet connection
-        self.top.after(SENSOR_TIMESTEP*1000, self.get_temperature)
-            
-    """
-    def get_temperature(self):
-        start = time.time()
-        try:
-            while(1):
-                val = time.time()-start
-                #print(val)
-                if(val> SENSOR_TIMESTEP):
-                    sensor_vals = read_sensors_v3.read_all_sensors('qwe',self.tn)
-                    print("update sensors")
-                    for vr in self.temp_tab.vars:
-                        print(vr.get())
-
-                    for i,var in zip(range(len(sensor_vals)),sensor_vals):
-                        print(i)
-                        #self.temp_tab.vars[i].set(str(var))
-                        self.temp_tab.text[i].configure(text=str(var))
-                    start = time.time()
-        finally:
-            print('Killing sensor read process')
-            self.tn.close()
-    """
-
-
-                    
-                        
-                
 
 
 
