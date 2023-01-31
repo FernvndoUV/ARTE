@@ -36,7 +36,7 @@ parser.add_argument('-temp_time', '--temp_time', dest='temp_time', default=30, t
 
 
 
-def write_10gbe_rawdata(filename, sock, pkt_size):
+def write_10gbe_rawdata(filename, sock, pkt_size,run):
     """
     Function to receive data from the sock socket and write it to a file.
     Is meanted to be forked by a main process that could do other stuffs in
@@ -46,13 +46,10 @@ def write_10gbe_rawdata(filename, sock, pkt_size):
     pkt_size:   size to read in each iteration
     """
     with open(filename, 'ab') as f:
-        while(1):
-            try:
-                while(1):
-                    data = sock.recv(pkt_size)
-                    f.write(data[:])
-            finally:
-                f.close()
+        while(run.is_set()):
+            data = sock.recv(pkt_size)
+            f.write(data[:])
+
 
 class dms_acquisition():
     def __init__(self, roach,DMs):
@@ -96,10 +93,11 @@ def measure_temperature(tn,temp_filename, temp_time):
             stamp = time.mktime(datetime.datetime.now().timetuple())
             packet = np.array((stamp, ambient,ppc,fpga,inlet, outlet))
             np.savetxt(f, packet)
-    finally:
+    #finally:
+    except:
         f.close()
 
-def get_misc_data(misc_filename, dm_acq, roach_ip, DMs):
+def get_misc_data(misc_filename, dm_acq, roach_ip, DMs,i, run):
     """
     Get miscellaneous data (antennas, rfi, etc)
     """
@@ -113,50 +111,46 @@ def get_misc_data(misc_filename, dm_acq, roach_ip, DMs):
     detections = []
     rfi_data = []
     antennas_data = []
-    a = 0
-    try:
-        while(1):
-            print(a)
-            a +=1
-            curr_time = time.time()
-            ex_time = curr_time-start
-            dm_acq.check_time(curr_time)
-            det = roach_control.read_frb_detection()
-            if(det!=0):
-                detections.append([det, ex_time])
-                roach_control.reset_detection_flag()
-            #rfi_data.append(utils.get_rfi_score(roach))
-            antennas_data.append(utils.get_antenas(roach))
-    finally:
-            np.savez(misc_filename,
-                    dm0=dm_acq.dedisp_data[0],
-                    dm1=dm_acq.dedisp_data[1],
-                    dm2=dm_acq.dedisp_data[2],
-                    dm3=dm_acq.dedisp_data[3],
-                    dm4=dm_acq.dedisp_data[4],
-                    dm5=dm_acq.dedisp_data[5],
-                    dm6=dm_acq.dedisp_data[6],
-                    dm7=dm_acq.dedisp_data[7],
-                    dm8=dm_acq.dedisp_data[8],
-                    dm9=dm_acq.dedisp_data[9],
-                    dm10=dm_acq.dedisp_data[10],
-                    mov_avg0=dm_acq.mov_avg[0],
-                    mov_avg1=dm_acq.mov_avg[1],
-                    mov_avg2=dm_acq.mov_avg[2],
-                    mov_avg3=dm_acq.mov_avg[3],
-                    mov_avg4=dm_acq.mov_avg[4],
-                    mov_avg5=dm_acq.mov_avg[5],
-                    mov_avg6=dm_acq.mov_avg[6],
-                    mov_avg7=dm_acq.mov_avg[7],
-                    mov_avg8=dm_acq.mov_avg[8],
-                    mov_avg9=dm_acq.mov_avg[9],
-                    mov_avg10=dm_acq.mov_avg[10],
-                    detections=detections,
-                    #rfi_data = rfi_data,
-                    antennas = antennas_data
-                )
-            roach.stop()
-
+    # a = 0
+    while(run.is_set()):
+        curr_time = time.time()
+        ex_time = curr_time-start
+        dm_acq.check_time(curr_time)
+        det = roach_control.read_frb_detection()
+        if(det!=0):
+            detections.append([det, ex_time])
+            roach_control.reset_detection_flag()
+        #rfi_data.append(utils.get_rfi_score(roach))
+        antennas_data.append(utils.get_antenas(roach))
+    print('saving misc: %i'%i)
+    np.savez(misc_filename,
+             dm0=dm_acq.dedisp_data[0],
+             dm1=dm_acq.dedisp_data[1],
+             dm2=dm_acq.dedisp_data[2],
+             dm3=dm_acq.dedisp_data[3],
+             dm4=dm_acq.dedisp_data[4],
+             dm5=dm_acq.dedisp_data[5],
+             dm6=dm_acq.dedisp_data[6],
+             dm7=dm_acq.dedisp_data[7],
+             dm8=dm_acq.dedisp_data[8],
+             dm9=dm_acq.dedisp_data[9],
+             dm10=dm_acq.dedisp_data[10],
+             mov_avg0=dm_acq.mov_avg[0],
+             mov_avg1=dm_acq.mov_avg[1],
+             mov_avg2=dm_acq.mov_avg[2],
+             mov_avg3=dm_acq.mov_avg[3],
+             mov_avg4=dm_acq.mov_avg[4],
+             mov_avg5=dm_acq.mov_avg[5],
+             mov_avg6=dm_acq.mov_avg[6],
+             mov_avg7=dm_acq.mov_avg[7],
+             mov_avg8=dm_acq.mov_avg[8],
+             mov_avg9=dm_acq.mov_avg[9],
+             mov_avg10=dm_acq.mov_avg[10],
+             detections=detections,
+             #rfi_data = rfi_data,
+             antennas = antennas_data
+         )
+    roach.stop()
 
 
 def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
@@ -196,28 +190,31 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         count = int(total_time//file_time)
 
     for i in range(count):
-        print(i)
         filename = str(datetime.datetime.now())
         tge_filename = os.path.join(folder,'logs', filename)
         misc_filename = os.path.join(folder,'misc', filename)
-        tge_process = multiprocessing.Process(target=write_10gbe_rawdata, name="tge", args=(tge_filename, sock, pkt_size, ))
-        misc_process = multiprocessing.Process(target=get_misc_data, name="misc", args=(misc_filename, dm_acq, roach_ip, DMs,))
+        run = multiprocessing.Event()
+        run.set()
+        tge_process = multiprocessing.Process(target=write_10gbe_rawdata, name="tge", args=(tge_filename, sock, pkt_size, run,))
+        misc_process = multiprocessing.Process(target=get_misc_data, name="misc", args=(misc_filename, dm_acq, roach_ip, DMs,i, run))
         tge_process.start()
         misc_process.start()
         roach_control.enable_diode()
         time.sleep(cal_time)
         roach_control.disable_diode()
         start = time.time()
-        #dm_acq.reset_acq(start)
+        dm_acq.reset_acq(start)
         while(1):
             ##if you want to save something else, put it here
             curr_time = time.time()
             ex_time = curr_time-start
             if(ex_time>(file_time*60)):
-                tge_process.terminate()
+                run.clear()
+                #tge_process.terminate()
                 tge_process.join()
-                misc_process.terminate()
+                #misc_process.terminate()
                 misc_process.join()
+                print("misc %i, tge %i"%(tge_process.is_alive(), misc_process.is_alive()))
                 break
     time.sleep(10)
     sock.close()
