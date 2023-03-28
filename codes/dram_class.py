@@ -4,13 +4,14 @@ import socket, struct, sys,time
 class dram_ring():
 
     def __init__(self, fpga, fpga_addr=('10.0.0.45',1234), sock_addr=('10.0.0.29', 1234), 
-            tx_core_name = 'one_GbE', n_pkt=10):
+            tx_core_name = 'one_GbE', n_pkt=10, timeout=10):
         """sock address = (gbe ip address, port)
         """
         self.fpga = fpga
         self.pkt_sock = 36*220
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(sock_addr)
+        self.sock.settimeout(timeout)
 
         ##gbe ethernet module parameters
         pkt_size = 36*220-2
