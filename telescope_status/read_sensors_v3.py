@@ -1,5 +1,4 @@
 import telnetlib, os, time
-import numpy as np
 
 """
 When changing the kernel the monitor its moved, so the katcp commands dont work 
@@ -38,38 +37,17 @@ hwmon7: fan chasis1
 hwmon8: fan chasis2
 
 """
-class telnet_roach():
-    def __init__(self, roach_ip):
-        self.msg = ''
-        return 1
-    
-    def write(self, msg):
-        self.msg = msg+'\r\n'
-        
-    def read_very_eager(self) 
-        resp = np.random.randint(low=1000, high=30000)
-        out = msg +resp+'\r\n'
-        return out
-    
-    def close(self):
-        return 1
-        
-        
 
 
-def roach_connect(roach_ip, sleep_time=0.5m debug=False):
-    if(debug):
-        tn = telnet_roach()
-        return tn
-    else:
-        user = 'root'
-        tn = telnetlib.Telnet(roach_ip)
-        tn.read_until("login: ".encode())
-        tn.write((user + "\n").encode())
-        time.sleep(sleep_time)
-        tn.read_very_eager()
-        time.sleep(sleep_time)
-        return tn
+def roach_connect(roach_ip, sleep_time=0.5):
+    user = 'root'
+    tn = telnetlib.Telnet(roach_ip)
+    tn.read_until("login: ".encode())
+    tn.write((user + "\n").encode())
+    time.sleep(sleep_time)
+    tn.read_very_eager()
+    time.sleep(sleep_time)
+    return tn
 
 def read_ambient_temp(roach_ip, sleep_time=0.5):
     """Read the ambient temperature in degrees

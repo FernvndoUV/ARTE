@@ -13,7 +13,3 @@ class external_sensors():
         data = self.sock.recv(100)
         data = data.decode()
         return data
-        
-        
-
-    

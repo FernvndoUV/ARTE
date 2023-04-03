@@ -89,3 +89,6 @@ roach_stuffs:
 
 gpu_stuffs:
 	echo "Nothing here yet"
+
+mount_stuffs:
+	echo "Nothing here yet"

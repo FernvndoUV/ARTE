@@ -18,6 +18,8 @@ def temperature(message):
     ans = ("ambient : "+str(ambient)+"\n ppc :"+str(ppc)+
            "\n fpga: "+str(fpga)+ "\n inlet: "+str(inlet)+"\n outlet: "+str(outlet))
     bot.reply_to(message,ans)
-    tn.close()
 
 bot.polling()
+
+
+
