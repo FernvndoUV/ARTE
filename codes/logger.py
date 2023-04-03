@@ -10,6 +10,7 @@ from multiprocessing import Process
 #from datetime import datetime
 import datetime
 import time
+from calandigital.instruments.rigol_dp832 import *
 ###
 ### Author: Sebastian Jorquera
 ### This code write several files with the data acquired from the 10Gbe port,
@@ -28,11 +29,12 @@ parser.add_argument('-ft', '--filetime', dest='file_time', default=2,
         type=float)
 parser.add_argument('-tt', '--totaltime', dest='total_time', default=60,
         type=float)
-parser.add_argument('-ri', '--roach_ip', dest='roach_ip', default='10.17.89.91')
+parser.add_argument('-ri', '--roach_ip', dest='roach_ip', default='192.168.0.168')
 parser.add_argument('-dms', '--dms', dest='dms', nargs="*")
 parser.add_argument('-cal', '--cal', dest='cal_time', default=1, type=float)
 parser.add_argument('-no_temp', '--no_temp', action='store_false')
 parser.add_argument('-temp_time', '--temp_time', dest='temp_time', default=30, type=float)
+parser.add_argument('-rli', '--rigol_ip', dest='rigol_ip', default='192.168.0.38')
 
 
 
@@ -154,8 +156,9 @@ def get_misc_data(misc_filename, dm_acq, roach_ip, DMs,i, run):
 
 
 def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
-        port=1234, roach_ip='10.17.89.91', DMs = [45,90,135,180,225,270,315,360,405,450,495],
-        cal_time=1, temp=True, temp_time=30):
+        port=1234, roach_ip='192.168.0.168', DMs = [45,90,135,180,225,270,315,360,405,450,495],
+        cal_time=1, temp=True, temp_time=30, rigol_ip='192.168.0.38',
+        noise_params=[2,5,1]):
     """
     Function to save the 10gbe data in a certain folder, like we dont want a
     super huge file we write several of them with the cpu timestamp.
@@ -164,6 +167,7 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
     total_time  :   Total time to save in minutes, if its none is a while true
     ip_addr     :   10gbe address
     port        :   10gbe port
+    noise_params: [channel, voltage, current]
     """
     roach = corr.katcp_wrapper.FpgaClient(roach_ip)
     roach_control = control.roach_control(roach)
@@ -171,6 +175,9 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
 
     pkt_size = 2**18    #256kB
     dm_acq = dms_acquisition(roach,DMs)
+    rigol = rigol_dp832(rigol_ip)
+    rigol.set_voltage(noise_params[0], noise_params[1])
+    rigol.set_current(noise_params[0], noise_params[2])
 
     #create the folder if it doesnt exists
     if(not os.path.exists(folder)):
@@ -199,9 +206,21 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         misc_process = multiprocessing.Process(target=get_misc_data, name="misc", args=(misc_filename, dm_acq, roach_ip, DMs,i, run))
         tge_process.start()
         misc_process.start()
+        ##change switch
         roach_control.enable_diode()
-        time.sleep(cal_time)
+        #hot measure
+        rigol.turn_output_on(noise_params[0])
+        if(not rigol.get_status(noise_params[0])):
+            raise Exception('Channel %i doesnt turn on!'%noise_params[2])
+        time.sleep(cal_time//2)
+        #cold measure
+        rigol.turn_output_off(noise_params[0])
+        if(rigol.get_status(noise_params[0])):
+            raise Exception('Channel %i doesnt turn off!'%noise_params[2])
+        time.sleep(cal_time//2)
         roach_control.disable_diode()
+        
+        ##starting measurement
         start = time.time()
         dm_acq.reset_acq(start)
         while(1):
@@ -230,4 +249,5 @@ if __name__ == '__main__':
     print("DMs: {:}".format(dms))
     receive_10gbe_data(folder=args.folder, file_time=args.file_time,total_time=args.total_time,
             ip_addr='192.168.2.10', port=1234, roach_ip=args.roach_ip,
-            DMs=dms, cal_time=args.cal_time, temp=args.no_temp, temp_time=args.temp_time)
+            DMs=dms, cal_time=args.cal_time, temp=args.no_temp, temp_time=args.temp_time,
+                       rigol_ip=args.rigol_ip)
