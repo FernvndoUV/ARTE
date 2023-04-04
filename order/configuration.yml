@@ -1,0 +1,88 @@
+###This yaml file contains the hyperparameters of the system
+
+roach_ip: "192.168.0.168"
+boffile: "arte_headers2.fpg"
+
+##Powersupply info
+supply_ip: "192.168.0.38"
+
+#
+cal_info:
+  calibrate: True         #if calibrate at the initizalization
+  gen_info: "TCPIP::192.168.1.34::INSTR"
+  gen_freq: 10
+  gen_power: -8
+  plot_spect: True
+  plot_snap: True
+  do_ogp: True
+  do_mcmm: True
+  do_inl: True
+
+
+sync_info:
+  sync_adcs: False        #if synchronize the ADCs at initizalization
+  gen_info: "TCPIP::192.168.1.34::INSTR"
+  gen_power: -8
+  points: 32
+
+
+##Dedispersor info
+DMs: [45,90,135,180,225,270,315,360,405,450,495]
+thresholds: [0.22034862053885101,
+0.47419230300761206,
+0.6387031656561817,
+0.7033368416103863,
+0.8564752217732761,
+1.1021449829662753,
+0.8593363770297829,
+0.9177729007016765,
+0.5887623494333615,
+0.6419021505738306,
+0.8205032423095127]
+
+#10Gbe logging
+tengbe_log:
+  ip: "192.168.2.10"
+  port: 1234,
+  log_time: 10              ##time between 2 spectras              
+  log_folder: "~/test"      ##where save the data
+  filetime: 2               ##minutes
+  totaltime: 60             ##total time to save
+  calibration_time: 1       ##seconds
+  temp: False               ##To save the temperature
+  temp_time: 30             ##time between two temperature measures
+
+
+#RFI detecction accumulation length
+rfi_acc_len: 1024
+rfi_threshold: 0.4          ##this number goes (0-1)
+rfi_holding_time: 0.5       ##RFI flag last this amount of seconds to be cleaned
+
+##ring buffer parameters:
+dram_gain: 32                ##this is the initial guess, then an iterative process
+                            ##must be used to obtain the right value
+dram_socket:
+  ip: "10.0.0.29"
+  port: 1234
+ 
+dram_frames: 10             ##frames to read per request
+
+###need to found an easy way to put the flags somewhere..
+
+
+####harcoded parameters
+fpga_clock: 150             ##MHz
+start_freq: 1200            ##starting frequency in MHz
+bandwidth: 600              ##MHz
+channels: 2048
+
+##offline processing stuffs
+log_info:
+  read_folder: "~/tmp"
+  img_folder: "~/tmp/images"
+  log_per_img: 3
+  plot_misc: False
+  plot_clip: False
+  decimation: 10
+  mov_avg_size: 32
+  tails: 32
