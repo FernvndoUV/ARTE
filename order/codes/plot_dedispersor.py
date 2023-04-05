@@ -40,7 +40,7 @@ def animate(_):
 
 
 if __name__ == '__main__':
-    f = open('../configuration.yml', 'r')
+    f = open('configuration.yml', 'r')
     config = yaml.load(f, Loader=yaml.loader.SafeLoader)
     f.close()
     roach = corr.katcp_wrapper.FpgaClient(config['roach_ip'])

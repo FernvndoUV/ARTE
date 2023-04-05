@@ -11,6 +11,7 @@ from multiprocessing import Process
 import datetime
 import time
 from calandigital.instruments.rigol_dp832 import *
+import subprocess
 
 ###
 ### Author: Sebastian Jorquera
@@ -228,9 +229,32 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         tn.close()
 
 if __name__ == '__main__':
-    f = open('../configuration.yml', 'r')
+    f = open('configuration.yml', 'r')
     config = yaml.load(f, Loader=yaml.loader.SafeLoader)
     f.close()
+
+    ##configure the network interface 
+    ##enable jumbo frames
+    cmd = ['sudo','ip', 'link' ,'set' ,config['tengbe_log']['interface'], 'mtu', '9000']
+    subprocess.call(cmd)
+    ##kernel configs
+    cmd = ['sudo', 'sysctl', '-w', 'net.core.rmem_max=26214400']
+    subprocess.call(cmd)
+    cmd = ['sudo', 'sysctl', '-w', 'net.core.rmem_default=26214400']
+    subprocess.call(cmd)
+    cmd = ['sudo', 'sysctl', '-w', 'net.core.optmem_max=26214400']
+    subprocess.call(cmd)
+    cmd = ['sudo', 'sysctl', '-w', 'net.core.netdev_max_backlog=300000']
+    subprocess.call(cmd)
+    #increase kernel buffers
+    cmd = ['sudo', 'ethtool', '-G', config['tengbe_log']['interface'], 'rx', '4096']
+    subprocess.call(cmd)
+    #increase pci mmrbc (this depend on the pci address of your nic)
+    cmd = ['sudo', 'setpci', '-v', '-d' '8086:10fb', 'e6.b=2e']
+    subprocess.call(cmd)
+
+    time.sleep(1)
+
     log_info = config['tengbe_log']
     receive_10gbe_data(folder=log_info['log_folder'], 
                        file_time=log_info['filetime'],

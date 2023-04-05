@@ -42,12 +42,13 @@ thresholds: [0.22034862053885101,
 
 #10Gbe logging
 tengbe_log:
+  interface: "enp2s0"
   ip: "192.168.2.10"
-  port: 1234,
-  log_time: 10              ##time between 2 spectras              
-  log_folder: "~/test"      ##where save the data
+  port: 1234
   filetime: 2               ##minutes
+  log_folder: "~/test"      ##where save the data
   totaltime: 60             ##total time to save
+  log_time: 10              ##time between 2 spectras              
   calibration_time: 1       ##seconds
   temp: False               ##To save the temperature
   temp_time: 30             ##time between two temperature measures

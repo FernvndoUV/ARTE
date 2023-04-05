@@ -62,7 +62,7 @@ roach_control.set_accumulation(config['rfi_acc_len'], thresh=config['rfi_thresho
 roach_control.set_accumulation(config['rfi_holding_time'], thresh=0, num=30)
 
 ##intialize 10Gbe subsystem
-roach_control.initialize_10gbe(integ_time=config['tengbe_log']['log_time'])
+roach_control.initialize_10gbe(integ_time=config['tengbe_log']['log_time']*1e-2)
 roach_control.enable_10gbe()
 
 
@@ -89,8 +89,8 @@ roach_control.dram = None
 if(config['cal_info']['calibrate']):
     cmd = ['calibrate_adc5g.py',
             '-i', config['roach_ip'],
-            '-gf', str(config['cal_info']['gen_freq'])
-            '-gp', str(config['cal_info']['gen_power'],
+            '-gf', str(config['cal_info']['gen_freq']),
+            '-gp', str(config['cal_info']['gen_power']),
             '--zdok0snap', 'adcsnap0', 'adcsnap1',
             '--zdok1snap', 'adcsnap2', 'adcsnap3',
             '--ns', '128',
