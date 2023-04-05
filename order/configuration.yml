@@ -14,9 +14,9 @@ cal_info:
   gen_power: -8
   plot_spect: True
   plot_snap: True
-  do_ogp: True
-  do_mcmm: True
-  do_inl: True
+  do_ogp: False
+  do_mmcm: True
+  do_inl: False
 
 
 sync_info:

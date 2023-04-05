@@ -47,11 +47,12 @@ roach_control.flag_channels(flags)
 
 ###compute the necessary accumulations
 dedisp_acc = utils.compute_accs(
-        config['start_freq']+config['bandwidth']/2, config['bandwidth'],
+        config['start_freq']+config['bandwidth']/2, float(config['bandwidth']),
         config['channels'], config['DMs'])
 dedisp_acc = np.array(dedisp_acc)//2
 
 ##dedispersor accumulation
+thresh = config['thresholds']
 for i in range(len(dedisp_acc)):
     roach_control.set_accumulation(dedisp_acc[i], thresh=thresh[i], num=1+i)
 
@@ -68,7 +69,7 @@ roach_control.enable_10gbe()
 #initialize ring buffer subsystem
 roach_control.set_ring_buffer_gain(config['dram_gain'])
 dram_addr = (config['dram_socket']['ip'], config['dram_socket']['port'])
-roach_control.initialize_dram(addr=dram_addr, n_pkt=dram_frames)
+roach_control.initialize_dram(addr=dram_addr, n_pkt=config['dram_frames'])
 ##TODO: auto gain algorithm!!
 #utils.ring_buffer_digital_gain(roach_cotrol)
 roach_control.write_dram()
@@ -86,37 +87,37 @@ roach_control.dram = None
 
 ###calibrate 
 if(config['cal_info']['calibrate']):
-    cmd = ['calibrate_adc5g',
+    cmd = ['calibrate_adc5g.py',
             '-i', config['roach_ip'],
-            '-gf', '10',
-            '-gp', '8',
-            '--zdok0snap', 'adcsnap0 adcsnap1',
-            '--zdok1snap', 'adcsnap2 adcsnap3',
+            '-gf', str(config['cal_info']['gen_freq'])
+            '-gp', str(config['cal_info']['gen_power'],
+            '--zdok0snap', 'adcsnap0', 'adcsnap1',
+            '--zdok1snap', 'adcsnap2', 'adcsnap3',
             '--ns', '128',
-            '-bw', config['bandwidth']]
-    if(config['calibrate']['do_mcmm']):
+            '-bw', str(config['bandwidth'])]
+    if(config['cal_info']['do_mmcm']):
         cmd.append('-dm')
-    if(config['calibrate']['do_ogp']):
+    if(config['cal_info']['do_ogp']):
         cmd.append('-do')
-    if(config['calibrate']['do_inl']):
+    if(config['cal_info']['do_inl']):
         cmd.append('-di')
-    if(config['calibrate']['plot_snap']):
+    if(config['cal_info']['plot_snap']):
         cmd.append('-psn')
-    if(config['calibrate']['plot_spect']):
+    if(config['cal_info']['plot_spect']):
         cmd.append('-psp')
 
     subprocess.call(cmd)
 
-if(config['sync_info']['sync_adc']):
+if(config['sync_info']['sync_adcs']):
    cmd = ['python2', 'codes/sync_adcs.py',
           '--ip', config['roach_ip'],
           '--bof', config['boffile'],
-          '--genname', config['sync_info']['gen_info'],
-          '--genpow', config['sync_info']['gen_power'],
-          '--bandwidth', config['bandwidth'],
-          '--points', config['sync_info']['points']
+          '--genname', str(config['sync_info']['gen_info']),
+          '--genpow', str(config['sync_info']['gen_power']),
+          '--bandwidth', str(config['bandwidth']),
+          '--points', str(config['sync_info']['points']),
           '--nyquist_zone', '3',
-          '--snapname', 'adcsnap0 adcsnap1 adcsnap2 adcsnap3' 
+          '--snapname', 'adcsnap0', 'adcsnap1', 'adcsnap2', 'adcsnap3' 
            ]
-    subprocess.call(cmd)
+   subprocess.call(cmd)
 
