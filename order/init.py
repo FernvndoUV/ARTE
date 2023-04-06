@@ -34,12 +34,12 @@ flags += (np.arange(256)+1792).tolist()
 ##  Programming FPGA and set the parameters
 ##
 roach = corr.katcp_wrapper.FpgaClient(config['roach_ip'])
-time.sleep(0.5)
+time.sleep(1)
 roach.upload_program_bof(bof_file=config['boffile'], port=3000, timeout=10)
-time.sleep(0.5)
+time.sleep(1)
 
 roach_control = control.roach_control(roach)
-time.sleep(0.2)
+time.sleep(1)
 roach_control.set_snap_trigger()
 time.sleep(0.2)
 

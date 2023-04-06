@@ -127,7 +127,7 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
 if name == '__main__':
     if(if not len(sys.argv)>1):
         #no argument, so use the config file to get the parameters
-        f = open('../configuration.yml', 'r')
+        f = open('configuration.yml', 'r')
         config = yaml.load(f, Loader=yaml.loader.SafeLoader)
         f.close()
         plot_folder(

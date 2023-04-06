@@ -8,10 +8,10 @@ if __name__ == '__main__':
             '-i', config['roach_ip'],
             '-gf', '10',
             '-gp', '8',
-            '--zdok0snap', 'adcsnap0 adcsnap1',
-            '--zdok1snap', 'adcsnap2 adcsnap3',
+            '--zdok0snap', 'adcsnap0', 'adcsnap1',
+            '--zdok1snap', 'adcsnap2', 'adcsnap3',
             '--ns', '128',
-            '-bw', config['bandwidth']]
+            '-bw', str(config['bandwidth'])]
     if(config['calibrate']['do_mcmm']):
         cmd.append('-dm')
     if(config['calibrate']['do_ogp']):
