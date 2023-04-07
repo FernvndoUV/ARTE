@@ -4,7 +4,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from utils import *
 import os, sys, yaml, argparse
-import gc
+import gc, multiprocessing
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--folder_name", dest="folder_name", default=None)
@@ -35,6 +35,13 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
     tails:          Spectras that we lost at the end of the file 
     img_folder:     Where to store the resulting images
     plot_clip:      if True, plot the clip curves over the total power
+
+    TODO: We still need to make some benchmarking to see what is the best option:
+        -Plot everything in a different thread (the memory will be free each time)
+         vs using the garbage collector
+        - plt.clf() vs ax.clear() vs plt.clear() etc, the idea is to check how to
+        reutilize the axes and the figure created or if its faster to just create
+        a new one in each iteration..
     """
     #create the folders if doesnt exist
     if(not os.path.exists(img_folder)):
@@ -46,6 +53,8 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
     freq = np.linspace(1200,1800, 2048, endpoint=False)
 
     n_img = len(log_names)//log_per_img
+    fig, axes = plt.subplots(2,1, sharex=True, gridspec_kw={'height_ratios': [0.15,0.85]})
+    cax = fig.add_axes([axes[1].get_position().x1+0.01,axes[1].get_position().y0,0.02,axes[1].get_position().height])
     for i in range(n_img):
         print("%i of %i"%(i+1,n_img))
         sublogs = log_names[i*log_per_img:(i+1)*log_per_img]
@@ -56,7 +65,6 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
 
         name = os.path.join(img_folder,  hr_i+'_to_'+hr_f)
         print('Making 10Gbe plot')
-        fig, axes = plt.subplots(2,1, sharex=True, gridspec_kw={'height_ratios': [0.15,0.85]})
         axes[0].set_title('Average power',fontsize=20)
         axes[0].plot(t,avg_pow,linewidth=1.5)
         axes[0].axis(ymin =  np.mean(avg_pow)-5 , ymax = np.mean(avg_pow)+5 )
@@ -91,37 +99,37 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
         axes[1].set_xlabel('Minutes',fontsize=15)
         axes[1].set_ylabel('MHz',fontsize=15)
         plt.tick_params(axis='both', labelsize=15)
-        cax = fig.add_axes([axes[1].get_position().x1+0.01,axes[1].get_position().y0,0.02,axes[1].get_position().height])
         plt.tick_params(axis='both', labelsize=15)
         plt.colorbar(graph, cax=cax)
         fig.set_size_inches(15,12)
-        plt.savefig(name+'_log.png',dpi=1000)
-        plt.close()
+        fig.savefig(name+'_log.png',dpi=1000)
+        #plt.close()
+        #plt.clf()
+        axes[0].clear()
+        axes[1].clear()
+        cax.clear()
 
         if(plot_clip):
             del clip
         del data, avg_pow, bases,flags
-        del fig, axes   ##maybe its faster to clean the canvas and keep the figure
         gc.collect()
 
         if(plot_misc):
             print("Making dedispersors plots")
             submisc = misc_names[i*log_per_img:(i+1)*log_per_img]
-            dms, mov_avg = get_dm_data(submisc)
+            misc_proc = multiprocessing.Process(target=plot_misc_data, args=(submisc, name, t[-1]))
+            misc_proc.start()
+            misc_proc.join()
 
-            tf = t[-1]
-            fig, axes = plt.subplots(11,1, sharex=True)
-            for i in range(11):
-                t = np.linspace(0,tf, len(dms[i][0]))
-                axes[i].plot(t,dms[i][0])
-                axes[i].plot(t, mov_avg[i][0])
-                axes[i].grid()
-            plt.savefig(name+'_dms.png', dpi=500)
-            fig.clear()
-            plt.close(fig)
-            del dms, mov_avg, t
-            del fig, axes
-            gc.collect()
+def plot_misc_data(submisc,name,tf):
+    fig, axes = plt.subplots(11,1, sharex=True)
+    dms, mov_avg = get_dm_data(submisc)
+    for i in range(11):
+        t = np.linspace(0,tf, len(dms[i][0]))
+        axes[i].plot(t,dms[i][0])
+        axes[i].plot(t, mov_avg[i][0])
+        axes[i].grid()
+    fig.savefig(name+'_dms.png', dpi=500)
 
 
 if __name__ == '__main__':
