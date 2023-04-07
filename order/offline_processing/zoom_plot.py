@@ -1,4 +1,4 @@
-from utils import get_image_data_temperature, get_dm_data
+from utils import get_log_data, get_dm_data
 import numpy as np
 import matplotlib.pyplot as plt
 import os, sys
