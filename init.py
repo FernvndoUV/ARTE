@@ -8,7 +8,8 @@ import corr
 ###
 ### hyperparameters
 ###
-roach_ip ='10.17.89.91'
+#roach_ip ='10.17.89.91'
+roach_ip ='192.168.1.18'
 boffile = 'arte_headers2.fpg' #'arte_gpio.fpg'#'arte_new2.fpg'
 
 ##harcoded parameters
@@ -108,7 +109,7 @@ roach.upload_program_bof(bof_file=boffile, port=3000, timeout=10)
 time.sleep(1)
 
 roach_control = control.roach_control(roach)
-time.sleep(0.2)
+time.sleep(1)
 roach_control.set_snap_trigger()
 time.sleep(0.2)
 

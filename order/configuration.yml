@@ -46,7 +46,7 @@ tengbe_log:
   ip: "192.168.2.10"
   port: 1234
   filetime: 2               ##minutes
-  log_folder: "~/test"      ##where save the data
+  log_folder: "Measures"      ##where save the data
   totaltime: 60             ##total time to save
   log_time: 10              ##time between 2 spectras              
   calibration_time: 1       ##seconds
@@ -79,8 +79,8 @@ channels: 2048
 
 ##offline processing stuffs
 log_info:
-  read_folder: "~/tmp"
-  img_folder: "~/tmp/images"
+  read_folder: "Measures"
+  img_folder: "images"
   log_per_img: 3
   plot_misc: False
   plot_clip: False

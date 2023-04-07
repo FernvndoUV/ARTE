@@ -62,7 +62,7 @@ roach_control.set_accumulation(config['rfi_acc_len'], thresh=config['rfi_thresho
 roach_control.set_accumulation(config['rfi_holding_time'], thresh=0, num=30)
 
 ##intialize 10Gbe subsystem
-roach_control.initialize_10gbe(integ_time=config['tengbe_log']['log_time']*1e-2)
+roach_control.initialize_10gbe(integ_time=config['tengbe_log']['log_time']*1e-3)
 roach_control.enable_10gbe()
 
 

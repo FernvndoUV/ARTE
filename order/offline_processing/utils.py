@@ -1,5 +1,5 @@
 import numpy as np
-import matploltib.pyplot as plt
+import matplotlib.pyplot as plt
 import os, sys
 from datetime import datetime, timedelta
 from scipy.signal import savgol_filter, medfilt
@@ -136,7 +136,7 @@ def get_log_data(filenames,cal_time=1,spect_time=1e-2,file_time=1 ,decimation=15
             sample = read_10gbe_data(filenames[i])
             sample_spect, header = sample.get_complete()
             sample.close_file()
-            base, temp_data = hot_cold_calibration(sample_spect, cal_time, spect_time, decimation)
+            base, temp_data = hot_cold_calibration(sample_spect, cal_time, spect_time, decimation, spect_size)
             data[i*(spect_size//decimation):(i+1)*(spect_size//decimation),flags] = temp_data
             bases[i,:] = base
             #now we look at clipping
@@ -165,12 +165,12 @@ def get_log_data(filenames,cal_time=1,spect_time=1e-2,file_time=1 ,decimation=15
     avg = np.mean(data[:, flags], axis=1)
     avg = moving_average(avg, win_size=win_size)
     clip01 = moving_average(clip01, win_size=win_size)
-    clip01 = np.invert(clip==0)
+    clip01 = np.invert(clip01==0)
     t = np.arange(len(avg))*spect_time/60.*decimation   #time in minutes
     return data, avg, (clip01, clip2, clip3), t, bases, flags
 
 
-def hot_cold_calibration(sample_spect, cal_time, spect_time, decimation, plot=False):
+def hot_cold_calibration(sample_spect, cal_time, spect_time, decimation, spect_size,plot=False):
     """
     Make the calibration steps into one file to obtain the absolute temperature
     """

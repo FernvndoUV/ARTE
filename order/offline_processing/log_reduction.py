@@ -49,7 +49,7 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
     for i in range(n_img):
         print("%i of %i"%(i+1,n_img))
         sublogs = log_names[i*log_per_img:(i+1)*log_per_img]
-        data, avg_pow, clips, t, bases,flags = get_image_data_temperature(sublogs,cal_time, spect_time,
+        data, avg_pow, clips, t, bases,flags = get_log_data(sublogs,cal_time, spect_time,
                 file_time, decimation, mov_avg_size, tails)
         hr_i= sublogs[0].split('/')[-1].split('.')[0]
         hr_f= sublogs[-1].split('/')[-1].split('.')[0]
@@ -124,21 +124,21 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
             gc.collect()
 
 
-if name == '__main__':
-    if(if not len(sys.argv)>1):
+if __name__ == '__main__':
+    if( not (len(sys.argv)>1)):
         #no argument, so use the config file to get the parameters
         f = open('configuration.yml', 'r')
         config = yaml.load(f, Loader=yaml.loader.SafeLoader)
         f.close()
         plot_folder(
                 folder_name=config['log_info']['read_folder'],
-                log_per_img=config['log_info']['log_per_img']
+                log_per_img=config['log_info']['log_per_img'],
                 cal_time=config['tengbe_log']['calibration_time'],
                 file_time=config['tengbe_log']['filetime'],
-                spect_time=config['tengbe_log']['log_time'],
+                spect_time=config['tengbe_log']['log_time']*1e-3,
                 plot_misc=config['log_info']['plot_misc'],
                 plot_clip=config['log_info']['plot_clip'],
-                decimation=config['log_info']['decimation']
+                decimation=config['log_info']['decimation'],
                 mov_avg_size=config['log_info']['mov_avg_size'],
                 tails=config['log_info']['tails'],
                 img_folder=config['log_info']['img_folder']
