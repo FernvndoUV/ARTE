@@ -8,7 +8,7 @@ basic_stuffs:
 	#add arte as sudoers, must be run as root
 	#usermod -aG sudo arte
 	##add sbin to the path
-	echo "PATH=$PATH:/usr/local/sbin:/usr/sbin/" >> ~./bashrc
+	echo "PATH=$PATH:/usr/local/sbin:/usr/sbin/" >> ~/.bashrc
 	bash .bashrc
 	#install ssh
 	sudo apt install -y openssh-server
@@ -26,6 +26,41 @@ basic_stuffs:
 	echo "deb http://deb.anydesk.com/ all main" | sudo tee /etc/apt/sources.list.d/anydesk-stable.list
 	sudo apt update
 	sudo apt install -y anydesk
+	##tiger-vnc
+	sudo apt install -y tigervnc-standalone-server tigervnc-common tightvncserver
+	sudo apt install -y lxqt-core
+	##you need to set the password with vncpasswd --> you need to do it
+	#set the parameters
+	touch ~/.vnc/config
+	echo "session=lxqt" >> ~/.vnc/config
+	echo "geometry=1920x1080" >> ~/.vnc/config
+	echo "localhost" >> ~/.vnc/config
+	echo "alwaysshared" >> ~/.vnc/config
+	##install xgbe stuffs
+	sudo apt -y install ethtool 
+	#install wireshark
+	sudo apt -y install wireshark
+	#install roach stuffs
+	sudo apt install -y python3 python2 g++ gcc python3-pip
+	sudo apt install -y python2-dev python-tk
+	#pip install virtualenv
+	sudo apt install -y python3-virtualenv
+	virtualenv -p /usr/bin/python2 ~/roach_env 
+	source ~/roach_env/bin/activate
+	mkdir tmp 
+	cd tmp 
+	git clone https://github.com/sebajor/calandigital
+	pip install -r calandigital/REQUIREMENTS
+	pip install calandigital/
+	sudo rm -r calandigital/
+	#install ipython
+	pip install ipython
+	##get arte folders
+	cd 
+	git clone https://github.com/sebajor/ARTE-control/	
+
+
+
 	
 
 xgbe_stuffs:
