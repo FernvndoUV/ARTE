@@ -4,13 +4,15 @@ import calandigital as calan
 import numpy as np
 import argparse, subprocess
 from  control import roach_control
-import utils,control
+import utils,control, yaml
 import read_sensors
 from multiprocessing import Process
 #from datetime import datetime
 import datetime
 import time
 from calandigital.instruments.rigol_dp832 import *
+import subprocess
+
 ###
 ### Author: Sebastian Jorquera
 ### This code write several files with the data acquired from the 10Gbe port,
@@ -19,23 +21,6 @@ from calandigital.instruments.rigol_dp832 import *
 ### for each DM and save the data accordingly.
 ### If you want you could save more data in the while loop.
 ###
-
-
-parser = argparse.ArgumentParser(
-    description="Save data comming from the 10Gbe interface")
-parser.add_argument('-f', '--folder', dest='folder',
-        default='log', type=str)
-parser.add_argument('-ft', '--filetime', dest='file_time', default=2,
-        type=float)
-parser.add_argument('-tt', '--totaltime', dest='total_time', default=60,
-        type=float)
-parser.add_argument('-ri', '--roach_ip', dest='roach_ip', default='192.168.0.168')
-parser.add_argument('-dms', '--dms', dest='dms', nargs="*")
-parser.add_argument('-cal', '--cal', dest='cal_time', default=1, type=float)
-parser.add_argument('-no_temp', '--no_temp', action='store_false')
-parser.add_argument('-temp_time', '--temp_time', dest='temp_time', default=30, type=float)
-parser.add_argument('-rli', '--rigol_ip', dest='rigol_ip', default='192.168.0.38')
-
 
 
 def write_10gbe_rawdata(filename, sock, pkt_size,run):
@@ -189,7 +174,9 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         temp_file = os.path.join(folder, 'temperature')
         temp_proc = multiprocessing.Process(target=measure_temperature, name='temp',args=(tn, temp_file, temp_time))
         temp_proc.start()
-
+    
+    ##make file to store the timestamps of the calibrations
+    cal_file = open(os.path.join(folder, 'calibrations'), 'a')
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((ip_addr, port))
 
@@ -207,6 +194,7 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         tge_process.start()
         misc_process.start()
         ##change switch
+        cal_file.write(str(time.time())+'\n')
         roach_control.enable_diode()
         #hot measure
         rigol.turn_output_on(noise_params[0])
@@ -238,16 +226,49 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
     time.sleep(10)
     sock.close()
     f.close()
+    cal_time.close()
     if(temp):
         temp_proc.terminate()
         temp_proc.join()
         tn.close()
 
 if __name__ == '__main__':
-    args = parser.parse_args()
-    dms = np.array(args.dms).astype(float)
-    print("DMs: {:}".format(dms))
-    receive_10gbe_data(folder=args.folder, file_time=args.file_time,total_time=args.total_time,
-            ip_addr='192.168.2.10', port=1234, roach_ip=args.roach_ip,
-            DMs=dms, cal_time=args.cal_time, temp=args.no_temp, temp_time=args.temp_time,
-                       rigol_ip=args.rigol_ip)
+    f = open('configuration.yml', 'r')
+    config = yaml.load(f, Loader=yaml.loader.SafeLoader)
+    f.close()
+
+    ##configure the network interface 
+    ##enable jumbo frames
+    cmd = ['sudo','ip', 'link' ,'set' ,config['tengbe_log']['interface'], 'mtu', '9000']
+    subprocess.call(cmd)
+    ##kernel configs
+    cmd = ['sudo', 'sysctl', '-w', 'net.core.rmem_max=26214400']
+    subprocess.call(cmd)
+    cmd = ['sudo', 'sysctl', '-w', 'net.core.rmem_default=26214400']
+    subprocess.call(cmd)
+    cmd = ['sudo', 'sysctl', '-w', 'net.core.optmem_max=26214400']
+    subprocess.call(cmd)
+    cmd = ['sudo', 'sysctl', '-w', 'net.core.netdev_max_backlog=300000']
+    subprocess.call(cmd)
+    #increase kernel buffers
+    cmd = ['sudo', 'ethtool', '-G', config['tengbe_log']['interface'], 'rx', '4096']
+    subprocess.call(cmd)
+    #increase pci mmrbc (this depend on the pci address of your nic)
+    cmd = ['sudo', 'setpci', '-v', '-d' '8086:10fb', 'e6.b=2e']
+    subprocess.call(cmd)
+
+    time.sleep(1)
+
+    log_info = config['tengbe_log']
+    receive_10gbe_data(folder=log_info['log_folder'], 
+                       file_time=log_info['filetime'],
+                       total_time=log_info['totaltime'],
+                       ip_addr=log_info['ip'],
+                       port=log_info['port'],
+                       roach_ip=config['roach_ip'],
+                       DMs=config['DMs'],
+                       cal_time=log_info['calibration_time'],
+                       temp=log_info['temp'],
+                       temp_time=log_info['temp_time'],
+                       rigol_ip=config['supply_ip']
+                       )

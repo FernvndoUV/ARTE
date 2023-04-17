@@ -1,66 +1,21 @@
+import yaml, time, sys
 import calandigital as calan
-import numpy as np
-import sys, time
 sys.path.append('codes')
+import numpy as np
+import matplotlib.pyplot as plt
 import utils, control
-import corr
+import corr, subprocess
 
-###
-### hyperparameters
-###
-#roach_ip ='10.17.89.91'
-roach_ip ='192.168.1.18'
-boffile = 'arte_headers2.fpg' #'arte_gpio.fpg'#'arte_new2.fpg'
+##
+##  Getting hyperparameters
+##
+f = open('configuration.yml', 'r')
+config = yaml.load(f, Loader=yaml.loader.SafeLoader)
+f.close()
 
-##harcoded parameters
-fpga_clk = 150.*10**6
-bw = 600.
-flow = 1200.
-nchannels = 2048.
-
-##dedispersors
-##(the dedispersor output and the treshold is a 20_10UFix)
-DMs = [45,90,135,180,225,270,315,360,405,450,495]
-thresh = thresh = [0.22034862053885101,
-0.47419230300761206,
-0.6387031656561817,
-0.7033368416103863,
-0.8564752217732761,
-1.1021449829662753,
-0.8593363770297829,
-0.9177729007016765,
-0.5887623494333615,
-0.6419021505738306,
-0.8205032423095127]
-
-# np.ones(11)*32#[4,4,4,4, 4, 4]     ## for each DM the detection threshold is
-
-                                        ## mov avg+thresh
-#10Gbe log
-log_time = 10.**-2                       ##10Gbe frame rate
-
-#rfi detection
-rfi_acc_len = 1024#256                       ##rfi subsystem accumulation
-
-rfi_thresh = 0.4                        ##over rfi_thresh is considered as rfi event
-rfi_hold = 0.5                          ##if an rfi event is detected we dont allow an FRB 
-                                        ##detection for rfi_hold seconds
-#ring buffer parameters
-adc_gain = 2**5                            ##the ADC samples are reduced to 4 bits per sample, this parameter
-                                        ##multiplies each ADC sample to modify its range
-sock_addr = ('10.0.0.29',1234)         ##ip, port of the computers
-                                        ##roach will transmit from  10.0.0.45, 1234
-                                        ##('10.0.0.29',1234) ('192.168.2.10',1234)CAMBIO POR FRAN
-dram_frames = 10
-#channels to flag
-
-
-
+##flags
 flags = np.arange(87).tolist()
-# flags = np.arange(20).tolist()
 flags = flags+[1024]
-# flags += np.arange(85).tolist()
-# flags += np.arange(1792,2048,1).tolist()
 flags += (np.arange(27)+394).tolist()
 flags += (np.arange(5)+455).tolist()
 flags += (np.arange(4)+1024).tolist()
@@ -69,43 +24,18 @@ flags += (np.arange(15)+1155).tolist()
 flags += (np.arange(12)+1175).tolist()
 flags += (np.arange(30)+1210).tolist()
 flags += (np.arange(16)+1275).tolist()
-
 flags += (np.arange(18)+1325).tolist()
 flags += (np.arange(10)+1367).tolist()
 flags += (np.arange(5)+1381).tolist()
 flags += (np.arange(40)+1420).tolist() # 1439
 flags += (np.arange(256)+1792).tolist()
 
-
-
-
-
-# flags incompletos
-#channels to flag
-# flags = np.arange(20).tolist()
-# #flags = flags+[1024]
-# flags += (np.arange(170)+20).tolist()
-# flags += (np.arange(30)+300).tolist()
-# flags += (np.arange(41)+380).tolist()
-# flags += (np.arange(5)+1155).tolist()
-# flags += (np.arange(12)+1175).tolist()
-# flags += (np.arange(21)+1220).tolist()
-# flags += (np.arange(16)+1275).tolist()
-# flags += (np.arange(18)+1325).tolist()
-# flags += (np.arange(10)+1367).tolist()
-# flags += (np.arange(16)+1439).tolist()
-# flags += (np.arange(2)+1830).tolist()
-# flags += (np.arange(136)+1911).tolist()
-# ###
-###
-###
-
-roach = corr.katcp_wrapper.FpgaClient(roach_ip)
+##
+##  Programming FPGA and set the parameters
+##
+roach = corr.katcp_wrapper.FpgaClient(config['roach_ip'])
 time.sleep(1)
-roach.upload_program_bof(bof_file=boffile, port=3000, timeout=10)
-
-#roach = calan.initialize_roach(roach_ip, boffile=boffile, upload=1)
-#roach = calan.initialize_roach(roach_ip, upload=0)
+roach.upload_program_bof(bof_file=config['boffile'], port=3000, timeout=10)
 time.sleep(1)
 
 roach_control = control.roach_control(roach)
@@ -116,25 +46,35 @@ time.sleep(0.2)
 roach_control.flag_channels(flags)
 
 ###compute the necessary accumulations
-dedisp_acc = utils.compute_accs(flow+bw/2, bw, nchannels, DMs)
+dedisp_acc = utils.compute_accs(
+        config['start_freq']+config['bandwidth']/2, float(config['bandwidth']),
+        config['channels'], config['DMs'])
 dedisp_acc = np.array(dedisp_acc)//2
 
 ##dedispersor accumulation
+thresh = config['thresholds']
 for i in range(len(dedisp_acc)):
     roach_control.set_accumulation(dedisp_acc[i], thresh=thresh[i], num=1+i)
 
-
 ##rfi accumulation
-roach_control.set_accumulation(rfi_acc_len, thresh=rfi_thresh, num=31)
-roach_control.set_accumulation(rfi_hold, thresh=0, num=30)
+roach_control.set_accumulation(config['rfi_acc_len'], thresh=config['rfi_threshold'],
+                               num=31)
+roach_control.set_accumulation(config['rfi_holding_time'], thresh=0, num=30)
 
-#initialize subsystem
-roach_control.initialize_10gbe(integ_time=log_time)
+#intialize the timestamp
+roach.write_int('timestamp', time.time())
+
+##intialize 10Gbe subsystem
+roach_control.initialize_10gbe(integ_time=config['tengbe_log']['log_time']*1e-3)
 roach_control.enable_10gbe()
 
+
 #initialize ring buffer subsystem
-roach_control.set_ring_buffer_gain(adc_gain)
-roach_control.initialize_dram(addr=sock_addr, n_pkt=dram_frames)
+roach_control.set_ring_buffer_gain(config['dram_gain'])
+dram_addr = (config['dram_socket']['ip'], config['dram_socket']['port'])
+roach_control.initialize_dram(addr=dram_addr, n_pkt=config['dram_frames'])
+##TODO: auto gain algorithm!!
+#utils.ring_buffer_digital_gain(roach_cotrol)
 roach_control.write_dram()
 
 #enable rfi subsytem
@@ -146,4 +86,41 @@ roach_control.enable_dedispersor_acc()
 ###close dram socket 
 roach_control.dram.close_socket()
 roach_control.dram = None
+
+
+###calibrate 
+if(config['cal_info']['calibrate']):
+    cmd = ['calibrate_adc5g.py',
+            '-i', config['roach_ip'],
+            '-gf', str(config['cal_info']['gen_freq']),
+            '-gp', str(config['cal_info']['gen_power']),
+            '--zdok0snap', 'adcsnap0', 'adcsnap1',
+            '--zdok1snap', 'adcsnap2', 'adcsnap3',
+            '--ns', '128',
+            '-bw', str(config['bandwidth'])]
+    if(config['cal_info']['do_mmcm']):
+        cmd.append('-dm')
+    if(config['cal_info']['do_ogp']):
+        cmd.append('-do')
+    if(config['cal_info']['do_inl']):
+        cmd.append('-di')
+    if(config['cal_info']['plot_snap']):
+        cmd.append('-psn')
+    if(config['cal_info']['plot_spect']):
+        cmd.append('-psp')
+
+    subprocess.call(cmd)
+
+if(config['sync_info']['sync_adcs']):
+   cmd = ['python2', 'codes/sync_adcs.py',
+          '--ip', config['roach_ip'],
+          '--bof', config['boffile'],
+          '--genname', str(config['sync_info']['gen_info']),
+          '--genpow', str(config['sync_info']['gen_power']),
+          '--bandwidth', str(config['bandwidth']),
+          '--points', str(config['sync_info']['points']),
+          '--nyquist_zone', '3',
+          '--snapname', 'adcsnap0', 'adcsnap1', 'adcsnap2', 'adcsnap3' 
+           ]
+   subprocess.call(cmd)
 

@@ -1,17 +1,8 @@
 import calandigital as calan
 import numpy as np
-import utils, corr, argparse
+import utils, corr, yaml
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-
-parser = argparse.ArgumentParser(
-    description="Plot spectra from an spectrometer model in ROACH.")
-parser.add_argument("-i", "--ip", dest="ip", default=None,
-    help="ROACH IP address.")
-parser.add_argument("-b", "--bof", dest="boffile",
-    help="Boffile to load into the FPGA.")
-parser.add_argument("-u", "--upload", dest="upload", action="store_true",
-    help="If used, upload .bof from PC memory (ROACH2 only).")
 
 def plot_rfi_signals(_fpga, _freq=[1200,1800]):
     global fpga, data, freq
@@ -52,7 +43,8 @@ def animate(i):
     return data
 
 if __name__ == '__main__':
-    args = parser.parse_args()
-    roach = corr.katcp_wrapper.FpgaClient(args.ip)
-    #roach = calan.initialize_roach(args.ip, boffile=args.boffile, upload=args.upload)
+    f = open('configuration.yml', 'r')
+    config = yaml.load(f, Loader=yaml.loader.SafeLoader)
+    f.close()
+    roach = corr.katcp_wrapper.FpgaClient(config['roach_ip'])
     plot_rfi_signals(roach)
