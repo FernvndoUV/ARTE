@@ -9,7 +9,7 @@ basic_stuffs:
 	#usermod -aG sudo arte
 	##add sbin to the path
 	echo "PATH=$PATH:/usr/local/sbin:/usr/sbin/" >> ~/.bashrc
-	bash .bashrc
+	bash ~/.bashrc
 	#install ssh
 	sudo apt install -y openssh-server
 	sudo systemctl restart ssh
