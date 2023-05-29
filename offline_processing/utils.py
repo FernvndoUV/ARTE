@@ -98,8 +98,8 @@ def moving_average(data, win_size=64):
     return out
 
 
-def get_log_data(filenames,cal_time=1,spect_time=1e-2,file_time=1 ,decimation=15,
-        win_size=15,tails=32, temperature=True):
+def get_log_data(filenames,cal_time=2,spect_time=1e-2,file_time=5 ,decimation=15,
+        win_size=15,tails=32, temperature=True, substract_median=True):
     """
     filenames   :   list with the names of the plots
     cal_time    :   calibration time at the begining of each file
@@ -116,27 +116,31 @@ def get_log_data(filenames,cal_time=1,spect_time=1e-2,file_time=1 ,decimation=15
         #get the first spectras as baseline
         hot_source = sample_spect[2:int(cal_time/spect_time),:]
         flags, baseline = get_baseline(np.median(hot_source,axis=0))
+
     else:
         flags = np.ones(2048, dtype=bool)
 
     ##approximated size for one file
     spect_size = int(file_time*60/spect_time-tails)
-    
-    
+
+
     data = np.zeros([len(filenames)*spect_size//decimation, int(flags.shape[0])])
     clip01 = np.zeros(len(filenames)*spect_size//decimation, dtype=bool)  #antenna0 and 1
     clip2 = np.zeros(len(filenames)*spect_size//decimation, dtype=bool)  #antenna2
     clip3 = np.zeros(len(filenames)*spect_size//decimation, dtype=bool)  #antenna3 (reference)
     bases = np.zeros((len(filenames), 2048))
 
-
+    #nueva linea fran
+    data_new = np.zeros([len(filenames)*spect_size//decimation, int(flags.shape[0])])
+    ### fin fran
 
     if(temperature):
          for i in range(0, len(filenames)):
             sample = read_10gbe_data(filenames[i])
             sample_spect, header = sample.get_complete()
             sample.close_file()
-            base, temp_data = hot_cold_calibration(sample_spect, cal_time, spect_time, decimation, spect_size)
+
+            base, temp_data = hot_cold_calibration(sample_spect, cal_time, spect_time, decimation, spect_size, substract_median=substract_median)
             data[i*(spect_size//decimation):(i+1)*(spect_size//decimation),flags] = temp_data
             bases[i,:] = base
             #now we look at clipping
@@ -162,42 +166,93 @@ def get_log_data(filenames,cal_time=1,spect_time=1e-2,file_time=1 ,decimation=15
             clip2[i*(spect_size//decimation):(i+1)*(spect_size//decimation)] = sat2
             clip3[i*(spect_size//decimation):(i+1)*(spect_size//decimation)] = sat3
 
-    avg = np.mean(data[:, flags], axis=1)
-    avg = moving_average(avg, win_size=win_size)
+    ## fran edicion
+    avg_pow = np.mean(data[:,flags], axis=1)
+    avg_pow = moving_average(avg_pow, win_size=win_size)
+    t = np.arange(len(avg_pow))*spect_time/60.*decimation #time in
+    ## fin fran edicion
+
+    # avg = np.mean(data[:, flags], axis=1)
+    # avg = moving_average(avg, win_size=win_size)
     clip01 = moving_average(clip01, win_size=win_size)
     clip01 = np.invert(clip01==0)
     t = np.arange(len(avg))*spect_time/60.*decimation   #time in minutes
     return data, avg, (clip01, clip2, clip3), t, bases, flags
 
 
-def hot_cold_calibration(sample_spect, cal_time, spect_time, decimation, spect_size,plot=False):
+
+
+
+def hot_cold_calibration(sample_spect, cal_time, spect_time, decimation, spect_size, plot=False,substract_median = True):
     """
     Make the calibration steps into one file to obtain the absolute temperature
     """
-    #get the first spectrums as baseline
-    hot_source = sample_spect[2:int(cal_time/spect_time*3),:]
-    ##at hot source there is an increase in the amount of power, so we search that
-    hot_pow = np.sum(hot_source, axis=1)
-    hot_pow = medfilt(hot_pow, 5)
-    ###here we should also check that the hot samples last cal_time
-    thresh = (np.max(hot_pow)+np.min(hot_pow))/2
-    index = (hot_pow>thresh)
 
-    if(plot):
-       plt.plot(hot_pow)
-       plt.plot(hot_pow[index], 'x')
-       plt.ylabel('Total Power')
-       plt.show()
-    
-    flags, baseline = get_baseline(np.median(hot_source[index,:],axis=0))
-    bases = baseline
+    P = np.median(sample_spect,axis = 1)
+    gradiente = np.abs(np.gradient(P))
+    peaks,_ = signal.find_peaks(gradiente,height = 1e6)
+
+    hot_index = peaks[0]+20
+    P_hot = (np.mean(sample_spect[hot_index:hot_index+5,:],axis=0))
+    P_hot = savgol_filter(P_hot, 9, 3)
+
+    load_index = peaks[1] + 20
+    P_load = (np.mean(sample_spect[load_index:load_index+5,:],axis=0))
+    P_load = savgol_filter(P_load, 9, 3)
+
+    aux_index = peaks[1]+200
+
+    P_aux = (np.mean(sample_spect[aux_index:aux_index+5,:],axis=0))
+    P_aux = savgol_filter(P_aux, 9, 3)
+
+
+    flags, baseline_load = get_baseline(P_load)
+    bases[i,:] = baseline_load
+
+    t_load = 290 #temp amb
+    ENR_ns = (14.85+14.74)/2. #dB
+    t_hot = 10**((ENR_ns-8.5)/10.)*t_load+t_load #temp ns on
+
+    t_rx = (t_hot*P_load -t_load*P_hot)/(P_hot-P_load)
     aux = sample_spect[:spect_size,:]
-    aux = (aux[:, flags]*380./baseline[flags])-90
-    ##
+    aux = (aux/P_load)*(t_rx+t_load)-t_rx
+    if(plot):
+        fig, axes = plt.subplots(2,2)
+        axes[0,0].plot(peaks,label = 'Peaks gradiente')
+        axes[1,0].plot(P_hot,label = 'Hot baseline')
+        axes[1,0].plot(P_load,label = 'Load baseline')
+        axes[0,1].plot(t_rx,label = 'Receiver noise temperature')
+
+        axes[1,1].plot(P_aux,label = 'Sky power')
+        axes[1,1].plotP_load(,label = 'Load power')
+
+        axes[0,0].set_title('Peaks gradiente')
+        axes[1,0].set_title('Hot and load baseline')
+        axes[0,1].set_title('Receiver noise temperature')
+        axes[1,1].set_title('Sky and load power')
+
+        axes[1,1].set_xlabel('samples')
+        axes[1,0].set_xlabel('samples')
+
+        axes[1,0].set_ylabel('Power linear')
+        axes[0,0].set_ylabel('Power linear')
+        for ax in axes.flatten():
+            ax.grid()
+            ax.legend()
+        plt.show()
+
     dec_size = aux.shape[0]//decimation
     dec_data = aux[:dec_size*decimation,:].reshape([-1, decimation, aux.shape[1]])
     dec_data = np.mean(dec_data.astype(float), axis=1)
-    return bases, dec_data
+
+    if(substract_median):
+        mediana = (np.median(dec_data[:,:],axis=0))
+        data_without_median = np.subtract(dec_data,mediana)
+        data_without_median[i*(spect_size//decimation):(i+1)*(spect_size//decimation),flags] =data_without_median[i*(spect_size//decimation):(i+1)*(spect_size//decimation),flags]
+        #Fin editado fran
+        return bases, data_without_median
+    else:
+        return bases, dec_data
 
 
 def saturation_search(header, spect_size, decimation):

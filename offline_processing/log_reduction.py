@@ -18,11 +18,12 @@ parser.add_argument("-t", "--tails", dest="tails", default=32, type=int)
 parser.add_argument("-i", "--img_folder", dest="img_folder", type=str)
 parser.add_argument("-m", "--plot_misc", dest="plot_misc", action="store_true")
 parser.add_argument("-pc", "--plot_clip", dest="plot_clip", action="store_true")
+parser.add_argument("-ns", "--non_substrac_median", dest="non_sub_median", action="store_true")
 
 
 def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1e-2,
         plot_misc=True, decimation=1, mov_avg_size=32, tails=32, img_folder="log_img",
-                plot_clip=True):
+                plot_clip=True, substract_median=True):
     """
     folder_name:    Folder to plot. It should have the folders logs and misc inside
     log_per_img:    How many logs to plot in one image
@@ -93,7 +94,10 @@ def plot_folder(folder_name, log_per_img=1, cal_time=1, file_time=2,spect_time=1
                 for up, down in zip(ris, fall):
                     axes[0].axvspan(t[up], t[down], color=colors[i], alpha=0.5, lw=0)
 
-        graph = axes[1].pcolormesh(t,freq , data[:len(t),::].T, cmap = 'viridis',vmax = 290,vmin =  200,shading='auto' )
+        std = np.std(data.flatten())*0.3    ##check!!!!
+        graph = axes[1].pcolormesh(t,freq , data[:len(t),::].T, 
+                                   cmap = 'viridis',vmax=std,
+                                   vmin =-std,shading='auto' )
 
         axes[1].vlines([1,2,3,4],freq[0], freq[2047], linestyles='dashed', linewidth= 0.1, colors='grey')
         axes[1].set_xlabel('Minutes',fontsize=15)
@@ -149,7 +153,8 @@ if __name__ == '__main__':
                 decimation=config['log_info']['decimation'],
                 mov_avg_size=config['log_info']['mov_avg_size'],
                 tails=config['log_info']['tails'],
-                img_folder=config['log_info']['img_folder']
+                img_folder=config['log_info']['img_folder'],
+                substract_median=config['log_info']['substract_median']
                 )
     else:
         args = parser.parse_args()
@@ -164,6 +169,7 @@ if __name__ == '__main__':
                 decimation=args.decimation,
                 mov_avg_size=args.mov_avg_size,
                 tails=args.tails,
-                img_folder=args.img_folder
+                img_folder=args.img_folder,
+                substrac_median=(not args.non_sub_median)
                 )
             
