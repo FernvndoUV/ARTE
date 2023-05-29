@@ -16,7 +16,7 @@ parser.add_argument("-u", "--upload", dest="upload", action="store_true",
 def plot_beam(_fpga, _freq=[1200, 1800]):
     global fpga, data, freq
     fpga = _fpga
-    y_lim = (-90,0)
+    y_lim = (0,100)#(-90,0)
 
     data = []
     axes = []
@@ -33,7 +33,7 @@ def plot_beam(_fpga, _freq=[1200, 1800]):
 
 def animate(i):
     dat = utils.get_beam(fpga)
-    spec = 10*np.log10(dat+1)-111.119
+    spec = 10*np.log10(dat+1)#-111.119
     data.set_data(freq, spec)
     return data,
 

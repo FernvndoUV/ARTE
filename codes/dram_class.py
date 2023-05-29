@@ -4,13 +4,14 @@ import socket, struct, sys,time
 class dram_ring():
 
     def __init__(self, fpga, fpga_addr=('10.0.0.45',1234), sock_addr=('10.0.0.29', 1234), 
-            tx_core_name = 'one_GbE', n_pkt=10):
+            tx_core_name = 'one_GbE', n_pkt=10, timeout=10, configure=True):
         """sock address = (gbe ip address, port)
         """
         self.fpga = fpga
         self.pkt_sock = 36*220
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(sock_addr)
+        self.sock.settimeout(timeout)
 
         ##gbe ethernet module parameters
         pkt_size = 36*220-2
@@ -39,13 +40,14 @@ class dram_ring():
         #fpga.write_int('ip_sel',0)
         
         
-        fpga.write_int('control1',2)
-        fpga.write_int('control1',1)
-        
-        #configure the ring buffer
-        fpga.write_int('ring_configuration', 0b101100) #rst everything
-        fpga.write_int('ring_n_pkt', self.n_pkt)
-        fpga.write_int('ring_gbe_idle', idle)
+        if(configure):
+            fpga.write_int('control1',2)
+            fpga.write_int('control1',1)
+            
+            #configure the ring buffer
+            fpga.write_int('ring_configuration', 0b101100) #rst everything
+            fpga.write_int('ring_n_pkt', self.n_pkt)
+            fpga.write_int('ring_gbe_idle', idle)
 
 
     def init_ring(self):
@@ -61,7 +63,10 @@ class dram_ring():
         start = time.time()
         self.fpga.write_int('ring_configuration', 0b110000)
         self.fpga.write_int('ring_configuration', 0b010010) #read 1 burst of 220
-        for i in range(int(762*2000/self.n_pkt)):     ##why this number?
+        ##The dram has 2**25 address numbers and I read n_pkt*220 each iteration
+        ##
+        #for i in range(int(762*2000/self.n_pkt)):     ##why this number?
+        for i in range(int(2**25/self.n_pkt/220)):     ##why this number?
             data = ""
             for j in range(self.n_pkt+1):
                 data =data+self.sock.recv(self.pkt_sock)

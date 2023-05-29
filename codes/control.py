@@ -293,7 +293,8 @@ class roach_control():
         self.roach.write_int('control_gain', gain_bin)
 
 
-    def initialize_dram(self, addr=('10.0.0.29', 1234), n_pkt=10):
+    def initialize_dram(self, addr=('10.0.0.29', 1234), n_pkt=10, configure=True,
+                        timeout=10):
         """
         Creates the DRAM object to control arte ring buffer
         addr:   (computer recv ip, destination port)
@@ -301,7 +302,8 @@ class roach_control():
         """
         if(self.dram is not None):
             raise Exception('There is already one dram object')
-        self.dram = dram_ring(self.roach, sock_addr=addr, n_pkt=n_pkt)
+        self.dram = dram_ring(self.roach, sock_addr=addr, n_pkt=n_pkt, configure=configure,
+                              timeout=timeout)
     
     def write_dram(self):
         """

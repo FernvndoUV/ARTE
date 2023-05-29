@@ -1,4 +1,4 @@
-ROACH_IP="10.17.89.91"
+ROACH_IP="192.168.0.168"
 BOF_FILE="../arte_gpio.fpg"
 RFI_ACC=1024
 

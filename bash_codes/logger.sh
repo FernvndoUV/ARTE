@@ -4,7 +4,7 @@ source configuration.sh
 #set up the 10gbe interface
 #sudo ip addr add 192.168.2.10/24 dev enp2s0
 #enable jumbo frame
-sudo ip link set enp2s0 mtu 9000        
+sudo ip link set enp2s0 mtu 9000
 #kernel configs
 sudo sysctl -w net.core.rmem_max=26214400
 sudo sysctl -w net.core.rmem_default=26214400
@@ -21,11 +21,11 @@ sudo setpci -v -d 8086:10fb e6.b=2e
 
 sleep 3
 
-python2 ../codes/logger.py \
-    --folder    ../logger_14Dec\
+python2 ../codes/logger_actual.py \
+    --folder /run/media/roach/bea2a9ef-570e-43f6-8d14-730349f0c25b/May24_23_utc_time_lt_11_07\
     --filetime  5\
-    --totaltime 14400\
-    --roach_ip 10.17.89.91\
-    --cal 1\
+    --totaltime 144000\
+    --roach_ip 192.168.0.168\
+    --cal 2\
     --dms 45 90 135 180 225 270 315 360 405 450 495
 

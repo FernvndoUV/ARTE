@@ -1,5 +1,5 @@
 #from log_reduction_v1 import get_image_data_temperature
-from log_red_V2 import get_image_data_temperature, get_dm_data
+from log_reduction import get_image_data_temperature, get_dm_data
 import numpy as np
 import matplotlib.pyplot as plt
 import os, sys
@@ -106,11 +106,19 @@ def zoom_plot(folder_name, start, stop=None,
         
         if(plot_baseline):
             for i in range(bases.shape[0]):
-                plt.plot(freq[f_i:f_e], bases[i,f_i:f_e], label=('%i'%i))
+                plt.plot(freq[f_i:f_e], bases[i,f_i:f_e], label=('base %i'%i))
                 plt.title('Baseline')
                 plt.xlabel('MHz')
                 plt.legend()
                 plt.grid()
+
+            aux = data/380*np.median(bases, axis=0)
+            plt.plot(freq[f_i:f_e], np.max(aux[200:,f_i:f_e], axis=0), label='max')
+            plt.plot(freq[f_i:f_e], np.min(aux[200:,f_i:f_e], axis=0), label='min')
+            plt.plot(freq[f_i:f_e], np.median(aux[200:,f_i:f_e], axis=0), label='median')
+            plt.plot(freq[f_i:f_e], np.mean(aux[200:,f_i:f_e], axis=0), label='avg')
+            plt.legend()
+
         #ipdb.set_trace()
 
         plt.figure()
@@ -173,6 +181,14 @@ def zoom_plot(folder_name, start, stop=None,
             plt.plot(freq[f_i:f_e], bases[i,f_i:f_e])
             plt.xlabel('MHz')
             plt.grid()
+    
+        aux = data/380*np.median(base, axis=0)
+    #aux = (aux[:, flags]*380./baseline[flags])-90
+        plt.plot(freq[f_i:f_e], np.max(aux[200:,f_i:f_e], axis=0), label='max')
+        plt.plot(freq[f_i:f_e], np.min(aux[200:,f_i:f_e], axis=0), label='min')
+        plt.plot(freq[f_i:f_e], np.median(aux[200:,f_i:f_e], axis=0), label='median')
+        plt.plot(freq[f_i:f_e], np.mean(aux[200:,f_i:f_e], axis=0), label='avg')
+        plt.legend()
 
     plt.figure()
     if(temperature):
@@ -232,9 +248,4 @@ if __name__ == '__main__':
 
     plt.show()
         
-
-
-
-
-
 

@@ -22,7 +22,7 @@ def plot_dedispersor(_fpga,  DMs):
     global fpga, data, index
     fpga = _fpga
     index = len(DMs)
-    y_lim = (58,80)
+    y_lim = (50,70)
     data = []
     fig = plt.figure()
     for i in range(index):
