@@ -11,7 +11,6 @@ from multiprocessing import Process
 import datetime
 import time
 from calandigital.instruments.rigol_dp832 import *
-import subprocess
 
 ###
 ### Author: Sebastian Jorquera
@@ -84,7 +83,23 @@ def measure_temperature(tn,temp_filename, temp_time):
     except:
         f.close()
 
-def get_misc_data(misc_filename, dm_acq, roach_ip, DMs,i, run):
+def dram_download(roach_ip, dram_addr, n_frames, measure_on):
+    roach = corr.katcp_wrapper.FpgaClient(roach_ip)
+    roach_control = control.roach_control(roach)
+    roach_control.initialize_dram(addr=dram_addr, n_pkt=dram_frames)
+    roach_control.write_dram()
+    while(measure_on.is_set()):
+        det = roach_control.read_frb_detection()
+        if(det!=0):
+            filename=datetime.now().strftime("d-%m-%Y:%H:%M:%S")
+            roach_control.read_dram(filename) 
+            roach_control.reset_detection_flag()
+            roach_control.write_dram()
+    roach_control.dram.close_socket()
+    roach_control.dram = None
+            
+
+def get_misc_data(misc_filename, dm_acq, roach_ip, DMs,i, run, dram_dump):
     """
     Get miscellaneous data (antennas, rfi, etc)
     """
@@ -103,10 +118,11 @@ def get_misc_data(misc_filename, dm_acq, roach_ip, DMs,i, run):
         curr_time = time.time()
         ex_time = curr_time-start
         dm_acq.check_time(curr_time)
-        det = roach_control.read_frb_detection()
-        if(det!=0):
-            detections.append([det, ex_time])
-            roach_control.reset_detection_flag()
+        if(not dram_dump):
+            det = roach_control.read_frb_detection()
+            if(det!=0):
+                detections.append([det, ex_time])
+                roach_control.reset_detection_flag()
         #rfi_data.append(utils.get_rfi_score(roach))
         antennas_data.append(utils.get_antenas(roach))
     print('saving misc: %i'%i)
@@ -142,8 +158,8 @@ def get_misc_data(misc_filename, dm_acq, roach_ip, DMs,i, run):
 
 def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         port=1234, roach_ip='192.168.0.168', DMs = [45,90,135,180,225,270,315,360,405,450,495],
-        cal_time=1, temp=True, temp_time=30, rigol_ip='192.168.0.38',
-        noise_params=[2,5,1]):
+        dram_dump=False,dram_addr=('10.0.0.29',1234), dram_frames=10,cal_time=1, temp=True, 
+        temp_time=30, rigol_ip='192.168.0.38',noise_params=[2,5,1]):
     """
     Function to save the 10gbe data in a certain folder, like we dont want a
     super huge file we write several of them with the cpu timestamp.
@@ -157,6 +173,7 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
     roach = corr.katcp_wrapper.FpgaClient(roach_ip)
     roach_control = control.roach_control(roach)
     time.sleep(1)
+    roach_control.reset_detection_flag()
 
     pkt_size = 2**18    #256kB
     dm_acq = dms_acquisition(roach,DMs)
@@ -169,6 +186,7 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         os.mkdir(folder)
         os.mkdir(os.path.join(folder, 'logs'))
         os.mkdir(os.path.join(folder, 'misc'))
+        os.mkdir(os.path.join(folder, 'hw_detections'))
     if(temp):
         tn = read_sensors.roach_connect(roach_ip)
         temp_file = os.path.join(folder, 'temperature')
@@ -183,6 +201,15 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
     if(total_time is not None):
         count = int(total_time//file_time)
 
+    ###start dram process
+    if(dram_dump):
+        measure_on = multiprocessing.Event()
+        measure_on.set()
+        dram_proc = multiprocessing.Process(target=dram_download, name='dram_read',
+                                               args=(roach_ip, dram_addr,
+                                                     dram_frames, measure_on))
+        dram_proc.start()
+
     for i in range(count):
         filename = str(datetime.datetime.now())
         tge_filename = os.path.join(folder,'logs', filename)
@@ -190,7 +217,9 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         run = multiprocessing.Event()
         run.set()
         tge_process = multiprocessing.Process(target=write_10gbe_rawdata, name="tge", args=(tge_filename, sock, pkt_size, run,))
-        misc_process = multiprocessing.Process(target=get_misc_data, name="misc", args=(misc_filename, dm_acq, roach_ip, DMs,i, run))
+        misc_process = multiprocessing.Process(target=get_misc_data, name="misc",
+                                    args=(misc_filename, dm_acq, roach_ip, 
+                                          DMs,i, run, dram_dump))
         tge_process.start()
         misc_process.start()
         ##change switch
@@ -231,6 +260,11 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         temp_proc.terminate()
         temp_proc.join()
         tn.close()
+    if(dram_dump):
+        measure_on.unset()
+        dram_proc.terminate()
+        dram_proc.join()
+        
 
 if __name__ == '__main__':
     f = open('configuration.yml', 'r')
@@ -258,6 +292,8 @@ if __name__ == '__main__':
     subprocess.call(cmd)
 
     time.sleep(1)
+    
+    dram_frames = config['dram_frames']
 
     log_info = config['tengbe_log']
     receive_10gbe_data(folder=log_info['log_folder'], 
@@ -268,7 +304,11 @@ if __name__ == '__main__':
                        roach_ip=config['roach_ip'],
                        DMs=config['DMs'],
                        cal_time=log_info['calibration_time'],
+                       dram_dump=config['dram_dump'],
+                       dram_addr=(config['dram_socket']['ip'], config['dram_socket']['port']),
+                       dram_frames=config['dram_frames'],
                        temp=log_info['temp'],
                        temp_time=log_info['temp_time'],
                        rigol_ip=config['supply_ip']
                        )
+

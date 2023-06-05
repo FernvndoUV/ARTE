@@ -60,6 +60,7 @@ rfi_threshold: 0.4          ##this number goes (0-1)
 rfi_holding_time: 0.5       ##RFI flag last this amount of seconds to be cleaned
 
 ##ring buffer parameters:
+dram_dump: False
 dram_gain: 32                ##this is the initial guess, then an iterative process
                             ##must be used to obtain the right value
 dram_socket:
