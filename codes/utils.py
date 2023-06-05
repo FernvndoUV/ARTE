@@ -84,6 +84,41 @@ def compute_accs(fcenter, bw, nchnls, DMs):
     print('Computed accumulations: '+ str(accs))
     return accs
 
+##calibrate dram gain
+def ring_buffer_calibration(roach_ctrl, percentage=0.5,iters=16, plot=False):
+    """
+    The full scale data is represented 8_7 fix, then is multiply by a gain of
+    32_10 ufix and the convertion finally is 4_0fix.
+    """
+    ##
+    gains = np.zeros(iters)
+    for i in range(iters):
+        snap_data = get_dram_snapshot(roach_ctrl.roach)
+        snap_data = snap_data.astype(float)
+        gain = np.max(snap_data[0,:])*2**7/2**3*percentage
+        gains[i] = gain
+    gain = np.median(gains)
+    print("Computed gain: {:.2f}".format(gain))
+    roach_ctrl.set_ring_buffer_gain(gain)
+    time.sleep(0.5)
+    snap_data = get_dram_snapshot(roach_ctrl.roach)
+    spectra = get_integrated_spectra(roach_ctrl.roach)
+    if(plot):
+        fig, axes = plt.subplots(2,3)
+        axes[0,0].plot(snap_data[0,:])
+        axes[1,0].plot(snap_data[1,:])
+        axes[0,1].plot(10*np.log10(spectra[0,:]+1))
+        axes[1,1].plot(10*np.log10(spectra[1,:]+1))
+        ##
+        axes[0,2].hist(snap_data[0,:], bins=np.linspace(-2**7,2**7-1,2**8))
+        axes[1,2].hist(snap_data[0,:], bins=np.linspace(-2**3,2**3-1,2**3))
+        for ax in axes.flatten():
+            ax.grid()
+        axes[0,0].set_ylim((-2**7-0.5,2**7+0.5))
+        axes[1,0].set_ylim((-2**3-0.5,2**3+0.5))
+        plt.show() 
+    return gain
+
 
 #class to read the 10gbe data
 

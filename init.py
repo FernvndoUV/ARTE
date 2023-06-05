@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import utils, control
 import corr, subprocess
+import ipdb
 
 ##
 ##  Getting hyperparameters
@@ -70,12 +71,13 @@ roach_control.enable_10gbe()
 
 
 #initialize ring buffer subsystem
-roach_control.set_ring_buffer_gain(config['dram_gain'])
-dram_addr = (config['dram_socket']['ip'], config['dram_socket']['port'])
-roach_control.initialize_dram(addr=dram_addr, n_pkt=config['dram_frames'])
+dram_gain = utils.ring_buffer_calibration(roach_control)
+#roach_control.set_ring_buffer_gain(config['dram_gain'])
+#dram_addr = (config['dram_socket']['ip'], config['dram_socket']['port'])
+#roach_control.initialize_dram(addr=dram_addr, n_pkt=config['dram_frames'])
 ##TODO: auto gain algorithm!!
 #utils.ring_buffer_digital_gain(roach_cotrol)
-roach_control.write_dram()
+#roach_control.write_dram()
 
 #enable rfi subsytem
 roach_control.enable_rfi_subsystem()
@@ -84,8 +86,8 @@ roach_control.reset_accumulators()
 roach_control.enable_dedispersor_acc()
 
 ###close dram socket 
-roach_control.dram.close_socket()
-roach_control.dram = None
+#roach_control.dram.close_socket()
+#roach_control.dram = None
 
 
 ###calibrate 

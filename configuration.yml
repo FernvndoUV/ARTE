@@ -1,6 +1,6 @@
 ###This yaml file contains the hyperparameters of the system
 
-roach_ip: "192.168.0.168"
+roach_ip: "192.168.1.18"
 boffile: "fpg_files/arte_timestamp.fpg" #"arte_headers2.fpg"
 
 ##Powersupply info
