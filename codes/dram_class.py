@@ -56,13 +56,21 @@ class dram_ring():
         self.fpga.write_int('control1',0b101)    
 
 
-    def reading_dram(self, filename='data'):
+    def reading_dram(self, filename='data', iters=None):
         self.fpga.write_int('control1', 0)
         f = file(filename, 'wb')            ##CHANGE TO APPEND!!
         start = time.time()
         self.fpga.write_int('ring_configuration', 0b110000)
         self.fpga.write_int('ring_configuration', 0b010010) #read 1 burst of 220
-        for i in range(int(762*2000/self.n_pkt)):     ##why this number?
+        """
+        When having npkt=1 we read 15840 bytes per iter, with 2 we have 15840*1.5
+        3->15840*2, etc
+        """
+        base = 15840    ##bytes read with n_pkt=1
+        if(iters is None):
+            bytes_per_iter = base*(self.n_pkt+1)/2
+            iters = int(2**25*288/8/(bytes_per_iter))
+        for i in range(iters):
             data = ""
             for j in range(self.n_pkt+1):
                 data =data+self.sock.recv(self.pkt_sock)

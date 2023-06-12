@@ -1,6 +1,6 @@
 import calandigital as calan
 import numpy as np
-import os
+import os, time
 
 
 
@@ -102,7 +102,7 @@ def ring_buffer_calibration(roach_ctrl, percentage=0.5,iters=16, plot=False):
     roach_ctrl.set_ring_buffer_gain(gain)
     time.sleep(0.5)
     snap_data = get_dram_snapshot(roach_ctrl.roach)
-    spectra = get_integrated_spectra(roach_ctrl.roach)
+    spectra = get_dram_integrated_spectra(roach_ctrl.roach)
     if(plot):
         fig, axes = plt.subplots(2,3)
         axes[0,0].plot(snap_data[0,:])
@@ -119,6 +119,32 @@ def ring_buffer_calibration(roach_ctrl, percentage=0.5,iters=16, plot=False):
         plt.show() 
     return gain
 
+
+def get_dram_integrated_spectra(roach, integ_spectra=32, single=False):
+    """
+    Get the integrated spectra calculated over the snapshots
+    """
+    if(not single):
+        data = np.zeros((2,4096))
+        for i in range(integ_spectra):
+            snap_data = get_dram_snapshot(roach)
+            spec_data = np.fft.fft(snap_data, axis=1)
+            data = data+np.abs(spec_data[:,:4096])
+    else:
+        data = np.zeros(4096)
+        for i in range(integ_spectra):
+            snap_data = np.array(calan.read_snapshots(roach,['snapshot']))[0]
+            spec_data = np.fft.fft(snap_data)
+            data = data+np.abs(spec_data[:4096])
+    return data
+
+def get_dram_snapshot(roach):
+    """
+    Get the dram snapshots
+    """
+    snap_data = calan.read_snapshots(roach, ['adcsnap0', 'snapshot'])
+    snap_data = np.array(snap_data)
+    return snap_data
 
 #class to read the 10gbe data
 

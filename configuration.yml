@@ -1,6 +1,6 @@
 ###This yaml file contains the hyperparameters of the system
 
-roach_ip: "192.168.1.18"
+roach_ip: "192.168.0.168"
 boffile: "fpg_files/arte_timestamp.fpg" #"arte_headers2.fpg"
 
 ##Powersupply info
@@ -66,6 +66,7 @@ dram_gain: 32                ##this is the initial guess, then an iterative proc
 dram_socket:
   ip: "10.0.0.29"
   port: 1234
+  interface: "enp4s0"
  
 dram_frames: 10             ##frames to read per request
 

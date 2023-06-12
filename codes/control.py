@@ -311,12 +311,12 @@ class roach_control():
             raise Exception("There is no dram object, call initialize_dram")
         self.dram.init_ring()
 
-    def read_dram(self, filename='data'):
+    def read_dram(self, filename='data', iters=None):
         """Stop the writing procedure and start reading the saved data in the DRAM.
         It should take like 3 minutes
         """
         if(self.dram is None):
             raise Exception("There is no dram object, call initialize_dram")
-        self.dram.reading_dram()
+        self.dram.reading_dram(filename=filename, iters=iters)
 
 
