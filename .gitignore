@@ -1,4 +1,5 @@
-measures/*
+Measures/*
+codes/Measures/*
 */__pycache__/
 *.pyc
 *.log
@@ -11,3 +12,4 @@ measures/*
 *.npz
 *calibrations*
 *.hdf5
+log_red_V2v2f.py

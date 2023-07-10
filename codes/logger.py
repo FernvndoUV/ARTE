@@ -1,4 +1,4 @@
-import socket, corr, sys, os, structlog
+import socket, corr, sys, os
 import time, datetime, multiprocessing
 import calandigital as calan
 import numpy as np
@@ -159,7 +159,7 @@ def get_misc_data(misc_filename, dm_acq, roach_ip, DMs,i, run, dram_dump):
 def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         port=1234, roach_ip='192.168.0.168', DMs = [45,90,135,180,225,270,315,360,405,450,495],
         dram_dump=False,dram_addr=('10.0.0.29',1234), dram_frames=10,cal_time=1, temp=True, 
-        temp_time=30, rigol_ip='192.168.0.38',noise_params=[2,5,1]):
+        temp_time=30, rigol_ip='192.168.0.38',noise_params=[2,28,1]):
     """
     Function to save the 10gbe data in a certain folder, like we dont want a
     super huge file we write several of them with the cpu timestamp.
@@ -230,8 +230,8 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         if(not rigol.get_status(noise_params[0])):
             raise Exception('Channel %i doesnt turn on!'%noise_params[2])
         time.sleep(cal_time//2)
-        #cold measure
-        rigol.turn_output_off(noise_params[0])
+        cold measure
+        #rigol.turn_output_off(noise_params[0])
         if(rigol.get_status(noise_params[0])):
             raise Exception('Channel %i doesnt turn off!'%noise_params[2])
         time.sleep(cal_time//2)

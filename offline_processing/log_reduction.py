@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from utils import *
+from log_utils import *
 import os, sys, yaml, argparse
 import gc, multiprocessing
 

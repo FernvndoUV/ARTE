@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os, sys
 from datetime import datetime, timedelta
-from scipy.signal import savgol_filter, medfilt
+from scipy.signal import savgol_filter, medfilt, find_peaks
 import ipdb
 
 
@@ -190,7 +190,7 @@ def hot_cold_calibration(sample_spect, cal_time, spect_time, decimation, spect_s
 
     P = np.median(sample_spect,axis = 1)
     gradiente = np.abs(np.gradient(P))
-    peaks,_ = signal.find_peaks(gradiente,height = 1e6)
+    peaks,_ = find_peaks(gradiente,height = 1e6)
 
     hot_index = peaks[0]+20
     P_hot = (np.mean(sample_spect[hot_index:hot_index+5,:],axis=0))
@@ -224,7 +224,7 @@ def hot_cold_calibration(sample_spect, cal_time, spect_time, decimation, spect_s
         axes[0,1].plot(t_rx,label = 'Receiver noise temperature')
 
         axes[1,1].plot(P_aux,label = 'Sky power')
-        axes[1,1].plotP_load(,label = 'Load power')
+        axes[1,1].plot(P_load,label = 'Load power')
 
         axes[0,0].set_title('Peaks gradiente')
         axes[1,0].set_title('Hot and load baseline')

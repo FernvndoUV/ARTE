@@ -12,7 +12,7 @@ cal_info:
   gen_info: "TCPIP::192.168.1.34::INSTR"
   gen_freq: 10
   gen_power: -8
-  plot_spect: False
+  plot_spect: True
   plot_snap: False
   do_ogp: False
   do_mmcm: True
@@ -45,14 +45,13 @@ tengbe_log:
   interface: "enp2s0"
   ip: "192.168.2.10"
   port: 1234
-  filetime: 2               ##minutes
-  log_folder: "Measures"      ##where save the data
-  totaltime: 60             ##total time to save
-  log_time: 10              ##time between 2 spectras              
-  calibration_time: 1       ##seconds
+  filetime: 5               ##minutes
+  log_folder: "/home/arte/steven_test" ##"/media/arte/bea2a9ef-570e-43f6-8d14-730349f0c25b/05_jul"    ##where save the data
+  totaltime: 144000      ##total time to save in minutes
+  log_time: 10              ##time between 2 spectras (ms)             
+  calibration_time: 2       ##seconds
   temp: False               ##To save the temperature
   temp_time: 30             ##time between two temperature measures
-
 
 #RFI detecction accumulation length
 rfi_acc_len: 1024
@@ -81,12 +80,12 @@ channels: 2048
 
 ##offline processing stuffs
 log_info:
-  read_folder: "Measures"
+  read_folder: "/media/arte/bea2a9ef-570e-43f6-8d14-730349f0c25b/MeasuresV3"
   img_folder: "images"
-  log_per_img: 3
+  log_per_img: 2
   plot_misc: False
   plot_clip: False
-  decimation: 10
-  mov_avg_size: 32
+  decimation: 15
+  mov_avg_size: 15
   tails: 32
-  subtract_median: True
+  substract_median: True
