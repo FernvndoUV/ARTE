@@ -211,7 +211,8 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         dram_proc.start()
 
     for i in range(count):
-        filename = str(datetime.datetime.now())
+        filename = str(datetime.datetime.utcnow())#modificado 10 mayo
+        #filename = str(datetime.datetime.now())
         tge_filename = os.path.join(folder,'logs', filename)
         misc_filename = os.path.join(folder,'misc', filename)
         run = multiprocessing.Event()

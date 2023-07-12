@@ -9,7 +9,7 @@ from calandigital.instruments.rigol_dp832 import rigol_dp832
 roach_ip = '192.168.0.168'
 rigol_ip = '192.168.0.38'
 boffile = "fpg_files/arte_timestamp.fpg" 
-iterations = 256
+iterations = 2048
 
 roach = corr.katcp_wrapper.FpgaClient(roach_ip)
 time.sleep(0.1)
@@ -48,11 +48,11 @@ hot_beam = np.sum(hot_spect, axis=0)
 cold_beam = np.sum(cold_spect, axis=0)
 
 
-hot_acc_beam = np.sum(np.abs(hot_beam)**2, axis=1)
-cold_acc_beam = np.sum(np.abs(cold_beam)**2, axis=1)
+hot_acc_beam = np.sum(hot_beam*np.conj(hot_beam), axis=1)
+cold_acc_beam = np.sum(cold_beam*np.conj(cold_beam), axis=1)
 
-hot_acc = np.sum(np.abs(hot_spect)**2, axis=2)
-cold_acc = np.sum(np.abs(cold_spect)**2, axis=2)
+hot_acc = np.sum(hot_spect*np.conj(hot_spect), axis=2)
+cold_acc = np.sum(cold_spect*np.conj(cold_spect), axis=2)
 
 
 np.savez('synth_adc.npz', 

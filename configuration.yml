@@ -12,7 +12,7 @@ cal_info:
   gen_info: "TCPIP::192.168.1.34::INSTR"
   gen_freq: 10
   gen_power: -8
-  plot_spect: True
+  plot_spect: False
   plot_snap: False
   do_ogp: False
   do_mmcm: True
