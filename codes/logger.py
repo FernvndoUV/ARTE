@@ -170,6 +170,8 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
     port        :   10gbe port
     noise_params: [channel, voltage, current]
     """
+
+    
     roach = corr.katcp_wrapper.FpgaClient(roach_ip)
     roach_control = control.roach_control(roach)
     time.sleep(1)
@@ -197,6 +199,7 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
     cal_file = open(os.path.join(folder, 'calibrations'), 'a')
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((ip_addr, port))
+    
 
     if(total_time is not None):
         count = int(total_time//file_time)
@@ -209,8 +212,12 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
                                                args=(roach_ip, dram_addr,
                                                      dram_frames, measure_on))
         dram_proc.start()
-
-    for i in range(count):
+    
+    #count = np.inf
+    #for i in range(count):
+    i = -1
+    while True:
+        i += 1
         filename = str(datetime.datetime.utcnow())#modificado 10 mayo
         #filename = str(datetime.datetime.now())
         tge_filename = os.path.join(folder,'logs', filename)
@@ -225,14 +232,16 @@ def receive_10gbe_data(folder, file_time,total_time=None,ip_addr='192.168.2.10',
         misc_process.start()
         ##change switch
         cal_file.write(str(time.time())+'\n')
-        roach_control.enable_diode()
+        #roach_control.enable_diode() esta mal aca
         #hot measure
         rigol.turn_output_on(noise_params[0])
+        roach_control.enable_diode()
         if(not rigol.get_status(noise_params[0])):
             raise Exception('Channel %i doesnt turn on!'%noise_params[2])
         time.sleep(cal_time//2)
-        cold measure
-        #rigol.turn_output_off(noise_params[0])
+
+        #cold measure
+        rigol.turn_output_off(noise_params[0])
         if(rigol.get_status(noise_params[0])):
             raise Exception('Channel %i doesnt turn off!'%noise_params[2])
         time.sleep(cal_time//2)
